@@ -203,7 +203,7 @@ export default function OrderDetailPage(): React.JSX.Element {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className={cn(NEUMORPHIC_CARD, "text-center py-12")}>
-          <Icon path={ICON_PATHS.alert} size="lg" className="text-error mx-auto mb-4" />
+          <Icon path={ICON_PATHS.alertCircle} size="lg" className="text-error mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-text-primary mb-2">Order Not Found</h2>
           <p className="text-text-secondary mb-6">The order you're looking for doesn't exist or you don't have access.</p>
           <Link href="/app/orders" className={PRIMARY_BUTTON}>
@@ -316,7 +316,7 @@ export default function OrderDetailPage(): React.JSX.Element {
           "border-l-4 border-error"
         )}>
           <div className="w-8 h-8 rounded-full bg-error/10 flex items-center justify-center flex-shrink-0">
-            <Icon path={ICON_PATHS.alert} size="sm" className="text-error" />
+            <Icon path={ICON_PATHS.alertCircle} size="sm" className="text-error" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-error mb-1">Error</p>
@@ -405,7 +405,7 @@ export default function OrderDetailPage(): React.JSX.Element {
               )}>
                 <div className="flex items-start gap-3 mb-4">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Icon path={ICON_PATHS.info} size="sm" className="text-primary" />
+                    <Icon path={ICON_PATHS.infoCircle} size="sm" className="text-primary" />
                   </div>
                   <p className="text-sm text-text-secondary pt-2">
                     Confirm this order to reserve funds from your balance. The freelancer will be notified to start work.
