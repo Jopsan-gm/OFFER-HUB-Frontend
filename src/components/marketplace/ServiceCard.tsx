@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/cn";
 import { Icon, ICON_PATHS } from "@/components/ui/Icon";
 import type { MarketplaceService } from "@/lib/api/marketplace";
@@ -25,74 +26,140 @@ const CATEGORY_MAP: Record<string, string> = {
 export function ServiceCard({ service, className }: ServiceCardProps): React.JSX.Element {
   const price = parseFloat(service.price);
   const category = CATEGORY_MAP[service.category] || service.category;
-  // Extract display name from email
-  const userName = service.user?.email?.split("@")[0] || "Anonymous";
-  const userEmail = service.user?.email || "";
+  const rating = service.averageRating ? parseFloat(service.averageRating) : null;
+
+  const displayName = service.user?.firstName && service.user?.lastName
+    ? `${service.user.firstName} ${service.user.lastName}`
+    : service.user?.username || "Anonymous";
+
+  const initials = service.user?.firstName && service.user?.lastName
+    ? `${service.user.firstName.charAt(0)}${service.user.lastName.charAt(0)}`
+    : displayName.charAt(0);
+
+  const location = service.user?.country || "Remote";
 
   return (
     <Link
       href={`/marketplace/services/${service.id}`}
       className={cn(
-        "block p-6 rounded-xl transition-all duration-200",
-        "bg-background shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
-        "hover:shadow-[2px_2px_4px_#d1d5db,-2px_-2px_4px_#ffffff]",
-        "hover:scale-[1.01]",
+        "group block p-6 rounded-3xl transition-all duration-300",
+        "bg-background",
+        "shadow-[8px_8px_16px_#d1d5db,-8px_-8px_16px_#ffffff]",
+        "hover:shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
+        "active:shadow-[inset_4px_4px_8px_#d1d5db,inset_-4px_-4px_8px_#ffffff]",
         className
       )}
     >
-      {/* Freelancer Info */}
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
-          {userName.charAt(0).toUpperCase()}
+      {/* Freelancer Header */}
+      <div className="flex items-start gap-4 mb-6">
+        <div className="relative shrink-0">
+          <div className={cn(
+            "w-16 h-16 rounded-2xl overflow-hidden transition-all duration-300",
+            "shadow-[inset_2px_2px_4px_#d1d5db,inset_-2px_-2px_4px_#ffffff]",
+            "group-hover:shadow-[inset_1px_1px_2px_#d1d5db,inset_-1px_-1px_2px_#ffffff]"
+          )}>
+            {service.user?.avatarUrl ? (
+              <Image
+                src={service.user.avatarUrl}
+                alt={displayName}
+                width={64}
+                height={64}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/10 text-primary flex items-center justify-center font-bold text-xl">
+                {initials.toUpperCase()}
+              </div>
+            )}
+          </div>
+          {service.status === "ACTIVE" && (
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-success rounded-full border-2 border-background shadow-sm" />
+          )}
         </div>
+
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-text-primary truncate">{userName}</p>
-          <p className="text-xs text-text-secondary truncate">{userEmail}</p>
+          <h3 className="font-bold text-text-primary text-lg truncate mb-1 group-hover:text-primary transition-colors">
+            {displayName}
+          </h3>
+          <div className="flex items-center gap-2 mb-2">
+            <Icon path={ICON_PATHS.location} size="sm" className="text-text-secondary flex-shrink-0" />
+            <span className="text-sm text-text-secondary truncate">{location}</span>
+          </div>
+          {rating && (
+            <div className="flex items-center gap-1">
+              <Icon path={ICON_PATHS.star} size="sm" className="text-warning" />
+              <span className="text-sm font-semibold text-text-primary">{rating.toFixed(1)}</span>
+              <span className="text-xs text-text-secondary">({service.totalOrders} orders)</span>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Service Title */}
+      <div className="mb-4">
+        <h4 className="font-bold text-text-primary text-base line-clamp-2 leading-tight mb-2">
+          {service.title}
+        </h4>
+        <p className="text-sm text-text-secondary line-clamp-2 leading-relaxed">
+          {service.description}
+        </p>
       </div>
 
       {/* Category Badge */}
-      <div className="mb-3">
-        <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary">
+      <div className="flex items-center gap-2 mb-6">
+        <span className={cn(
+          "px-3 py-1.5 rounded-xl text-xs font-semibold",
+          "bg-background text-text-secondary",
+          "shadow-[2px_2px_4px_#d1d5db,-2px_-2px_4px_#ffffff]"
+        )}>
           {category}
         </span>
-      </div>
-
-      {/* Title */}
-      <h3 className="text-lg font-semibold text-text-primary mb-2 line-clamp-2">
-        {service.title}
-      </h3>
-
-      {/* Description */}
-      <p className="text-sm text-text-secondary mb-4 line-clamp-3">{service.description}</p>
-
-      {/* Details */}
-      <div className="flex items-center justify-between pt-4 border-t border-border-light">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 text-primary">
-            <Icon path={ICON_PATHS.currency} size="sm" />
-            <span className="font-semibold">${price.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center gap-1 text-text-secondary">
-            <Icon path={ICON_PATHS.clock} size="sm" />
-            <span className="text-sm">{service.deliveryDays} day{service.deliveryDays !== 1 ? "s" : ""}</span>
-          </div>
-        </div>
-        {service.totalOrders > 0 && (
-          <div className="flex items-center gap-1 text-text-secondary">
-            <Icon path={ICON_PATHS.check} size="sm" />
-            <span className="text-xs">{service.totalOrders} order{service.totalOrders !== 1 ? "s" : ""}</span>
-          </div>
+        {service.totalOrders > 10 && (
+          <span className={cn(
+            "px-3 py-1.5 rounded-xl text-xs font-semibold",
+            "bg-success/10 text-success border border-success/20"
+          )}>
+            Top Rated
+          </span>
         )}
       </div>
 
-      {/* Total Orders */}
-      {service.totalOrders > 0 && (
-        <div className="mt-3 flex items-center gap-1 text-xs text-text-secondary">
-          <Icon path={ICON_PATHS.check} size="sm" />
-          <span>{service.totalOrders} completed order{service.totalOrders !== 1 ? "s" : ""}</span>
+      {/* Stats Section */}
+      <div className={cn(
+        "grid grid-cols-3 gap-3 p-4 rounded-2xl mb-5",
+        "bg-background",
+        "shadow-[inset_2px_2px_4px_#d1d5db,inset_-2px_-2px_4px_#ffffff]"
+      )}>
+        <div className="flex flex-col items-center">
+          <Icon path={ICON_PATHS.briefcase} size="sm" className="text-text-secondary mb-1" />
+          <span className="text-sm font-bold text-text-primary">{service.totalOrders}</span>
+          <span className="text-[10px] text-text-secondary uppercase">Orders</span>
         </div>
-      )}
+        <div className="flex flex-col items-center border-x border-border-light">
+          <Icon path={ICON_PATHS.clock} size="sm" className="text-text-secondary mb-1" />
+          <span className="text-sm font-bold text-text-primary">{service.deliveryDays}d</span>
+          <span className="text-[10px] text-text-secondary uppercase">Delivery</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <Icon path={ICON_PATHS.currency} size="sm" className="text-primary mb-1" />
+          <span className="text-sm font-bold text-primary">${price.toLocaleString()}</span>
+          <span className="text-[10px] text-text-secondary uppercase">Price</span>
+        </div>
+      </div>
+
+      {/* CTA Button */}
+      <button
+        className={cn(
+          "w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200",
+          "bg-primary text-white",
+          "shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
+          "hover:shadow-[2px_2px_4px_#d1d5db,-2px_-2px_4px_#ffffff]",
+          "active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
+          "group-hover:bg-primary-hover"
+        )}
+      >
+        View Service
+      </button>
     </Link>
   );
 }
