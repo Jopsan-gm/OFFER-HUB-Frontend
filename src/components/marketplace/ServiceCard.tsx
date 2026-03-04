@@ -82,7 +82,7 @@ export function ServiceCard({ service, className }: ServiceCardProps): React.JSX
             {displayName}
           </h3>
           <div className="flex items-center gap-2 mb-2">
-            <Icon path={ICON_PATHS.location} size="sm" className="text-text-secondary flex-shrink-0" />
+            <Icon path={ICON_PATHS.mapPin} size="sm" className="text-text-secondary flex-shrink-0" />
             <span className="text-sm text-text-secondary truncate">{location}</span>
           </div>
           {rating && (
