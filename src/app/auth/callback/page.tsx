@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
@@ -19,18 +19,27 @@ export default function OAuthCallbackPage() {
   const router = useRouter();
   const { login, redirectAfterLogin, setRedirectAfterLogin } = useAuthStore();
   const [state, setState] = useState<CallbackState>({ type: "loading" });
+  const processedRef = useRef(false);
 
   useEffect(() => {
     async function handleOAuthCallback() {
+      // Prevent re-running after we've processed the callback
+      if (processedRef.current) return;
+
       // Wait for session to load
       if (status === "loading") return;
 
       // No session means user cancelled or error
       if (!session?.provider || !session?.providerAccountId || !session?.oauthEmail) {
-        setState({ type: "error", message: "OAuth authentication was cancelled or failed" });
+        // Only set error if we haven't processed yet and status is not loading
+        if (status === "unauthenticated") {
+          setState({ type: "error", message: "OAuth authentication was cancelled or failed" });
+        }
         return;
       }
 
+      // Mark as processed to prevent re-runs
+      processedRef.current = true;
       setState({ type: "processing" });
 
       try {
