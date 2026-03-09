@@ -12,6 +12,10 @@ export interface UserProfile {
   avatarUrl: string | null;
   bio: string | null;
   country: string | null;
+  countryCode: string | null;
+  region: string | null;
+  regionCode: string | null;
+  showOnMap: boolean;
   type: string;
   status: string;
   createdAt: string;
@@ -25,6 +29,10 @@ export interface UpdateProfileData {
   avatarUrl?: string;
   bio?: string;
   country?: string;
+  countryCode?: string;
+  region?: string;
+  regionCode?: string;
+  showOnMap?: boolean;
 }
 
 /**

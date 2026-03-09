@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Country } from "country-state-city";
+import { Country, State } from "country-state-city";
 import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/stores/auth-store";
 import { Icon, ICON_PATHS, LoadingSpinner } from "@/components/ui/Icon";
@@ -119,12 +119,20 @@ export default function ProfilePage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [formData, setFormData] = useState<ProfileFormData>(INITIAL_FORM_DATA);
   const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState("");
+  const [showOnMap, setShowOnMap] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Get all countries - simple list without flags
   const countries = useMemo(() => Country.getAllCountries(), []);
+
+  // Get regions/states for selected country
+  const regions = useMemo(() => {
+    if (!selectedCountry) return [];
+    return State.getStatesOfCountry(selectedCountry);
+  }, [selectedCountry]);
 
   // Wait for Zustand to hydrate from localStorage
   useEffect(() => {
@@ -162,8 +170,22 @@ export default function ProfilePage() {
           );
           if (country) {
             setSelectedCountry(country.isoCode);
+
+            // Set region from profile after country is set
+            if (profile.region) {
+              const states = State.getStatesOfCountry(country.isoCode);
+              const state = states.find(
+                s => s.name.toLowerCase() === profile.region?.toLowerCase()
+              );
+              if (state) {
+                setSelectedRegion(state.isoCode);
+              }
+            }
           }
         }
+
+        // Set showOnMap preference
+        setShowOnMap(profile.showOnMap || false);
       } catch (error) {
         console.error("Failed to load profile:", error);
       } finally {
@@ -240,7 +262,13 @@ export default function ProfilePage() {
 
     try {
       // Find country name from code
-      const countryName = countries.find(c => c.isoCode === selectedCountry)?.name || "";
+      const country = countries.find(c => c.isoCode === selectedCountry);
+      const countryName = country?.name || "";
+
+      // Find region name from code
+      const region = regions.find(r => r.isoCode === selectedRegion);
+      const regionName = region?.name || "";
+      const regionCode = selectedCountry && selectedRegion ? `${selectedCountry}-${selectedRegion}` : "";
 
       // Don't send blob URLs to backend - they're not persistent
       const avatarToSend = avatarUrl?.startsWith('blob:') ? undefined : avatarUrl || undefined;
@@ -251,6 +279,10 @@ export default function ProfilePage() {
         username: formData.username,
         bio: formData.bio,
         country: countryName,
+        countryCode: selectedCountry || undefined,
+        region: regionName || undefined,
+        regionCode: regionCode || undefined,
+        showOnMap,
         avatarUrl: avatarToSend,
       });
 
@@ -347,13 +379,40 @@ export default function ProfilePage() {
               <label className="block text-sm font-medium text-text-primary mb-2">Country</label>
               <select
                 value={selectedCountry}
-                onChange={(e) => setSelectedCountry(e.target.value)}
+                onChange={(e) => {
+                  setSelectedCountry(e.target.value);
+                  setSelectedRegion(""); // Reset region when country changes
+                }}
                 className={cn(NEUMORPHIC_INPUT, "pr-10")}
               >
                 <option value="">Select country...</option>
                 {countries.map((country) => (
                   <option key={country.isoCode} value={country.isoCode}>
                     {country.flag} {country.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">
+                State / Region
+              </label>
+              <select
+                value={selectedRegion}
+                onChange={(e) => setSelectedRegion(e.target.value)}
+                className={cn(NEUMORPHIC_INPUT, "pr-10")}
+                disabled={!selectedCountry || regions.length === 0}
+              >
+                <option value="">
+                  {!selectedCountry
+                    ? "Select a country first..."
+                    : regions.length === 0
+                    ? "No regions available"
+                    : "Select region..."}
+                </option>
+                {regions.map((region) => (
+                  <option key={region.isoCode} value={region.isoCode}>
+                    {region.name}
                   </option>
                 ))}
               </select>
@@ -375,6 +434,47 @@ export default function ProfilePage() {
                   {formData.bio.length}/{MAX_BIO_LENGTH}
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Map Visibility Toggle */}
+          <div className={cn(
+            "p-4 rounded-xl",
+            "bg-background/50",
+            "border border-gray-200"
+          )}>
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Show on Community Map
+                </label>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Allow your profile to be displayed on our global community map.
+                  This only shows your country and region — not your exact location.
+                  It helps other users discover freelancers and clients in their area.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showOnMap}
+                onClick={() => setShowOnMap(!showOnMap)}
+                className={cn(
+                  "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full",
+                  "transition-colors duration-200 ease-in-out",
+                  "focus:outline-none focus:ring-2 focus:ring-primary/20",
+                  showOnMap ? "bg-primary" : "bg-gray-300"
+                )}
+              >
+                <span
+                  className={cn(
+                    "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg",
+                    "transform transition duration-200 ease-in-out",
+                    "translate-y-0.5",
+                    showOnMap ? "translate-x-5" : "translate-x-0.5"
+                  )}
+                />
+              </button>
             </div>
           </div>
 
