@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/cn";
 import { Icon, ICON_PATHS } from "@/components/ui/Icon";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { getWalletDashboard, type WalletDashboardData } from "@/lib/api/wallet";
 import {
   BalanceCard,
@@ -41,6 +42,11 @@ export default function WalletPage(): React.JSX.Element {
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [withdrawSuccess, setWithdrawSuccess] = useState<string | null>(null);
 
+  // On-chain balances of the connected external wallet (SCF D1.1). Independent
+  // of the platform ledger above: it loads on connection and refreshes on its own.
+  const walletBalance = useWalletBalance();
+  const refreshWalletBalance = walletBalance.refresh;
+
   const load = useCallback(async () => {
     if (!token) {
       setData(null);
@@ -67,10 +73,11 @@ export default function WalletPage(): React.JSX.Element {
   }, [load]);
 
   const refresh = useCallback(() => {
+    refreshWalletBalance();
     if (!token) return;
     setIsRefreshing(true);
     void load();
-  }, [token, load]);
+  }, [token, load, refreshWalletBalance]);
 
   const pullStart = useRef(0);
   const pulling = useRef(false);
@@ -234,6 +241,19 @@ export default function WalletPage(): React.JSX.Element {
           available={data.balance.available}
           reserved={data.balance.reserved}
           currency={data.balance.currency}
+          externalWallet={
+            walletBalance.address === null
+              ? undefined
+              : {
+                  address: walletBalance.address,
+                  balances: walletBalance.balances,
+                  isLoading: walletBalance.isLoading,
+                  isRefreshing: walletBalance.isRefreshing,
+                  error: walletBalance.error,
+                  isUnfunded: walletBalance.isUnfunded,
+                  onRefresh: refreshWalletBalance,
+                }
+          }
         />
       </div>
 
