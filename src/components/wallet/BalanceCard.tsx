@@ -2,14 +2,34 @@
 
 import { cn } from "@/lib/cn";
 import { Icon, ICON_PATHS } from "@/components/ui/Icon";
+import {
+  WalletAssetBalances,
+  type WalletAssetBalancesProps,
+} from "@/components/wallet/WalletAssetBalances";
+
+/**
+ * Live Horizon balances for a connected external wallet. Everything the
+ * `useWalletBalance` hook returns, plus its refresh callback.
+ */
+export type BalanceCardExternalWallet = Omit<WalletAssetBalancesProps, "className">;
 
 interface BalanceCardProps {
   available: string;
   reserved: string;
   currency: string;
   className?: string;
+  /**
+   * On-chain XLM and USDC of the connected `WalletType.EXTERNAL` wallet.
+   * Omitted for custodial (INVISIBLE) wallets, which hold nothing on Horizon —
+   * the card then renders exactly as before.
+   */
+  externalWallet?: BalanceCardExternalWallet;
 }
 
+/**
+ * Formats the platform ledger balance, which is a fiat currency. Not reusable
+ * for XLM or USDC: `style: "currency"` requires an ISO 4217 code.
+ */
 function formatMoney(value: string, currency: string): string {
   const n = parseFloat(value);
   if (Number.isNaN(n)) return value;
@@ -24,6 +44,7 @@ export function BalanceCard({
   reserved,
   currency,
   className,
+  externalWallet,
 }: BalanceCardProps): React.JSX.Element {
   const availN = parseFloat(available);
   const resN = parseFloat(reserved);
@@ -80,6 +101,13 @@ export function BalanceCard({
           <p className="text-lg font-semibold text-warning">{formatMoney(reserved, currency)}</p>
         </div>
       </div>
+
+      {externalWallet ? (
+        <WalletAssetBalances
+          {...externalWallet}
+          className="mt-6 pt-6 border-t border-border-light"
+        />
+      ) : null}
     </div>
   );
 }

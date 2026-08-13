@@ -23,6 +23,30 @@ export interface WalletConnectionState {
   disconnectWallet: () => void;
 }
 
+/**
+ * One asset line of a Stellar account, normalized from Horizon's `balances[]`.
+ *
+ * Amounts stay strings: Horizon reports 7-decimal fixed point and `number`
+ * cannot round-trip large balances exactly. Convert only for display.
+ */
+export interface StellarAssetBalance {
+  /** Display code, e.g. "XLM" or "USDC". */
+  code: string;
+  /** Balance as Horizon reports it, e.g. "9974.9999800". "0" without a trustline. */
+  balance: string;
+  /**
+   * False when the account holds no trustline for this asset. Always true for
+   * XLM, which every funded account holds natively.
+   */
+  hasTrustline: boolean;
+}
+
+/** XLM and USDC balances of a single Stellar account. */
+export interface StellarAccountBalances {
+  xlm: StellarAssetBalance;
+  usdc: StellarAssetBalance;
+}
+
 export interface WalletKitContextValue {
   /** True once SWK has been initialized in the browser. False during SSR and first paint. */
   isReady: boolean;
