@@ -1,41 +1,31 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/cn";
-import { StellarIcon } from "@/components/ui/StellarIcon";
 import { LoadingSpinner } from "@/components/ui/Icon";
 import { WalletConnectModal } from "@/components/wallet/WalletConnectModal";
 import { useWalletKit } from "@/hooks/use-wallet-kit";
 import { useWalletAuth, type WalletAuthStep } from "@/hooks/useWalletAuth";
 
 export interface WalletSignInButtonProps {
-  /** Called once the wallet session is stored, so the page can redirect. */
   onSignedIn?: () => void;
-  /** Mirrors the other auth buttons while an email login is in flight. */
   disabled?: boolean;
   className?: string;
 }
 
-/**
- * What the user is actually waiting on.
- *
- * The signing step blocks on the wallet's own confirmation popup, which is
- * easily missed behind the browser window — naming it is the difference between
- * waiting and knowing to go look.
- */
 const STEP_LABEL: Record<Exclude<WalletAuthStep, "idle">, string> = {
-  "requesting-challenge": "Preparing sign-in...",
+  "requesting-challenge": "Preparing sign-in…",
   signing: "Check your wallet to sign",
-  verifying: "Verifying signature...",
+  verifying: "Verifying signature…",
 };
 
-/**
- * Sign in with a Stellar wallet — the D1.2 challenge-response flow.
- *
- * With no wallet connected the click opens `WalletConnectModal` and the flow
- * continues from its `onConnected`, so connecting and signing in read as one
- * action rather than two.
- */
+const WALLETS = [
+  { id: "freighter", name: "Freighter", src: "/wallets/freighter_logo.png" },
+  { id: "lobstr", name: "Lobstr", src: "/wallets/lobstr_logo.png" },
+  { id: "xbull", name: "xBull", src: "/wallets/xbull_logo.png" },
+] as const;
+
 export function WalletSignInButton({
   onSignedIn,
   disabled = false,
@@ -47,58 +37,69 @@ export function WalletSignInButton({
 
   async function runSignIn(publicKey: string): Promise<void> {
     const session = await signIn(publicKey);
-    if (session !== null) {
-      onSignedIn?.();
-    }
+    if (session !== null) onSignedIn?.();
   }
 
-  async function handleClick(): Promise<void> {
+  async function handleConnect(): Promise<void> {
     reset();
-
-    if (address === null) {
+    if (address !== null) {
+      await runSignIn(address);
+    } else {
       setIsModalOpen(true);
-      return;
     }
-
-    await runSignIn(address);
   }
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
+    <div className={cn("flex flex-col gap-3", className)}>
+
+      {/* Supported wallet logos */}
+      <div className="flex items-center justify-center gap-4">
+        {WALLETS.map((wallet) => (
+          <div key={wallet.id} className="flex flex-col items-center gap-1" title={wallet.name}>
+            <span className="shadow-[2px_2px_4px_#d1d5db,-2px_-2px_4px_#ffffff] rounded-xl p-0.5 bg-white">
+              <Image src={wallet.src} alt={wallet.name} width={36} height={36} className="rounded-lg" />
+            </span>
+            <span className="text-[10px] text-text-secondary font-medium">{wallet.name}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Primary CTA — matches the email sign-in button style */}
       <button
         type="button"
-        onClick={handleClick}
+        onClick={handleConnect}
         disabled={disabled || isAuthenticating}
         aria-busy={isAuthenticating}
-        // The primary action of its panel, so it mirrors the email tab's submit
-        // button rather than the secondary styling of the OAuth row.
         className={cn(
-          "w-full flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl",
-          "bg-primary text-white font-medium cursor-pointer",
+          "w-full px-6 py-3 rounded-xl font-medium mt-1 cursor-pointer",
+          "bg-primary text-white",
           "shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
           "hover:bg-primary-hover hover:shadow-[6px_6px_12px_#d1d5db,-6px_-6px_12px_#ffffff] hover:scale-[1.02]",
           "active:shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2)] active:scale-[0.98]",
-          "focus-visible:ring-2 focus-visible:ring-primary/40 outline-none",
-          "transition-all duration-200",
-          "disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+          "disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100",
+          "transition-all duration-200 flex items-center justify-center gap-2",
         )}
       >
         {isAuthenticating ? (
           <LoadingSpinner size="sm" />
         ) : (
-          <span className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
-            <StellarIcon className="text-white" />
-          </span>
+          <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 opacity-90" aria-hidden="true">
+            <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+          </svg>
         )}
-        <span className="text-sm">
-          {step === "idle" ? "Continue with wallet" : STEP_LABEL[step]}
+        <span>
+          {step === "idle" ? "Sign in with wallet" : STEP_LABEL[step]}
         </span>
       </button>
 
-      {/* Announced rather than only shown: the failure often happens while the
-          user is looking at the wallet popup, not at this page. */}
+      {/* Security note */}
+      <p className="text-center text-[11px] text-text-secondary leading-snug">
+        Your keys never leave your wallet.{" "}
+        <span className="text-text-tertiary">No password required.</span>
+      </p>
+
       {error !== null && (
-        <p role="alert" className="text-xs text-error px-1">
+        <p role="alert" className="text-xs text-error text-center px-1">
           {error}
         </p>
       )}

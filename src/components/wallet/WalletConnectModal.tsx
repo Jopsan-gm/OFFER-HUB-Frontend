@@ -5,39 +5,27 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { StellarWalletsKit, type ISupportedWallet } from "@creit.tech/stellar-wallets-kit";
 import { cn } from "@/lib/cn";
-import { Icon, ICON_PATHS, LoadingSpinner } from "@/components/ui/Icon";
-import { NEUMORPHIC_CARD, NEUMORPHIC_INSET } from "@/lib/styles";
+import { LoadingSpinner } from "@/components/ui/Icon";
 import { useWalletKit } from "@/hooks/use-wallet-kit";
 import { useAuthStore } from "@/stores/auth-store";
 
 export interface WalletConnectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** Called with the public key once a wallet is connected. */
   onConnected?: (address: string) => void;
 }
 
-/**
- * SWK rejects with plain `{ code, message }` objects rather than Errors, so a
- * normal `instanceof Error` check would swallow the useful part.
- */
 function toErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
+  if (error instanceof Error) return error.message;
   if (typeof error === "object" && error !== null && "message" in error) {
     const { message } = error as { message: unknown };
-    if (typeof message === "string" && message.length > 0) {
-      return message;
-    }
+    if (typeof message === "string" && message.length > 0) return message;
   }
-
   return fallback;
 }
 
 function truncateAddress(address: string): string {
-  return `${address.slice(0, 6)}…${address.slice(-6)}`;
+  return `${address.slice(0, 8)}…${address.slice(-8)}`;
 }
 
 export function WalletConnectModal({
@@ -45,7 +33,7 @@ export function WalletConnectModal({
   onClose,
   onConnected,
 }: WalletConnectModalProps): React.JSX.Element | null {
-  const { address, network } = useWalletKit();
+  const { address } = useWalletKit();
   const connectWallet = useAuthStore((state) => state.connectWallet);
   const disconnectWallet = useAuthStore((state) => state.disconnectWallet);
 
@@ -56,78 +44,40 @@ export function WalletConnectModal({
 
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Availability is probed live (each module answers within 1s or is reported
-  // unavailable), so the list is refreshed every time the modal opens rather
-  // than cached — a user may install a wallet without reloading the page.
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    let isCancelled = false;
-
+    if (!isOpen) return;
+    let cancelled = false;
     StellarWalletsKit.refreshSupportedWallets()
-      .then((supported) => {
-        if (!isCancelled) {
-          setWallets(supported);
-          setLoadError(null);
-        }
-      })
-      .catch((error: unknown) => {
-        if (!isCancelled) {
-          setLoadError(toErrorMessage(error, "Could not load the wallet list."));
-        }
-      });
-
-    return () => {
-      isCancelled = true;
-    };
+      .then((supported) => { if (!cancelled) { setWallets(supported); setLoadError(null); } })
+      .catch((err: unknown) => { if (!cancelled) setLoadError(toErrorMessage(err, "Could not load wallets.")); });
+    return () => { cancelled = true; };
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
     dialogRef.current?.focus();
-
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
-  if (!isOpen || typeof document === "undefined") {
-    return null;
-  }
+  if (!isOpen || typeof document === "undefined") return null;
 
   async function handleConnect(wallet: ISupportedWallet) {
     if (!wallet.isAvailable) {
       window.open(wallet.url, "_blank", "noopener,noreferrer");
       return;
     }
-
     setConnectingId(wallet.id);
     setConnectError(null);
-
     try {
       StellarWalletsKit.setWallet(wallet.id);
-
-      // `getAddress` only reads the kit's memory and throws when nothing is
-      // connected yet, so a first-time connection has to go to the wallet.
       const { address: connected } = await StellarWalletsKit.fetchAddress();
-
       connectWallet(connected);
       onConnected?.(connected);
       onClose();
-    } catch (error) {
-      setConnectError(
-        toErrorMessage(error, `Could not connect to ${wallet.name}. Please try again.`),
-      );
+    } catch (err) {
+      setConnectError(toErrorMessage(err, `Could not connect to ${wallet.name}. Please try again.`));
     } finally {
       setConnectingId(null);
     }
@@ -140,18 +90,13 @@ export function WalletConnectModal({
 
   const isConnecting = connectingId !== null;
 
-  // Portalled to <body>. The landing Navbar is `backdrop-blur-md`, and an
-  // element with a backdrop-filter becomes the containing block for its
-  // fixed-position descendants — rendered in place from the navbar trigger,
-  // this overlay resolved against the header's 64px box instead of the
-  // viewport and sat clamped to the top of the page.
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
         onClick={onClose}
-        aria-label="Close wallet connection dialog"
+        aria-label="Close"
         disabled={isConnecting}
       />
 
@@ -160,55 +105,71 @@ export function WalletConnectModal({
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="wallet-connect-title"
-        aria-describedby="wallet-connect-description"
+        aria-labelledby="wc-title"
         className={cn(
-          NEUMORPHIC_CARD,
-          "relative w-full max-w-md max-h-[90vh] overflow-y-auto p-5 sm:p-6 outline-none",
+          "relative w-full max-w-sm outline-none",
+          "bg-white rounded-2xl p-6",
+          "shadow-[8px_8px_16px_#d1d5db,-8px_-8px_16px_#ffffff]",
+          "animate-scale-in",
         )}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={isConnecting}
-          className={cn(
-            "absolute top-4 right-4 p-2 rounded-lg text-text-secondary",
-            "hover:text-text-primary hover:bg-background transition-colors",
-            "disabled:opacity-40 disabled:cursor-not-allowed",
-          )}
-          aria-label="Close"
-        >
-          <Icon path={ICON_PATHS.close} size="md" />
-        </button>
+        {/* Header */}
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <h2 id="wc-title" className="text-lg font-bold text-text-primary">
+              {address ? "Wallet connected" : "Connect wallet"}
+            </h2>
+            <p className="text-sm text-text-secondary mt-0.5">
+              {address ? "Your Stellar wallet is active" : "Choose a wallet to sign in securely"}
+            </p>
+          </div>
 
-        <div className="pr-10">
-          <h2 id="wallet-connect-title" className="text-xl font-bold text-text-primary">
-            Connect a wallet
-          </h2>
-          <p id="wallet-connect-description" className="text-sm text-text-secondary mt-1">
-            {address
-              ? "Your Stellar wallet is connected."
-              : `Choose a Stellar wallet to connect on ${network}.`}
-          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isConnecting}
+            aria-label="Close"
+            className={cn(
+              "w-9 h-9 flex items-center justify-center rounded-xl shrink-0 ml-3",
+              "text-text-secondary bg-white",
+              "shadow-[3px_3px_6px_#d1d5db,-3px_-3px_6px_#ffffff]",
+              "hover:text-text-primary",
+              "active:shadow-[inset_2px_2px_4px_#d1d5db,inset_-2px_-2px_4px_#ffffff]",
+              "transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed",
+            )}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
 
+        {/* Divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-5" />
+
+        {/* Content */}
         {address ? (
-          <div className="mt-5 space-y-4">
-            <div className={cn(NEUMORPHIC_INSET, "rounded-2xl p-4")}>
-              <p className="text-xs text-text-secondary">Connected address</p>
-              <p className="mt-1 font-mono text-sm font-semibold text-text-primary break-all">
-                {truncateAddress(address)}
-              </p>
+          <div className="space-y-4">
+            <div className="rounded-xl p-4 shadow-[inset_3px_3px_6px_#d1d5db,inset_-3px_-3px_6px_#ffffff]">
+              <p className="text-xs font-medium text-text-secondary mb-1.5">Connected address</p>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <p className="font-mono text-sm font-semibold text-text-primary truncate">
+                  {truncateAddress(address)}
+                </p>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-3">
+            <div className="flex gap-3 pt-1">
               <button
                 type="button"
                 onClick={handleDisconnect}
                 className={cn(
-                  "px-5 py-2.5 rounded-xl text-sm font-medium",
-                  "text-text-secondary hover:text-text-primary",
-                  "bg-background transition-colors",
+                  "flex-1 py-2.5 rounded-xl text-sm font-medium",
+                  "text-text-secondary bg-white",
+                  "shadow-[3px_3px_6px_#d1d5db,-3px_-3px_6px_#ffffff]",
+                  "hover:text-error active:shadow-[inset_2px_2px_4px_#d1d5db,inset_-2px_-2px_4px_#ffffff]",
+                  "transition-all duration-150 cursor-pointer",
                 )}
               >
                 Disconnect
@@ -217,8 +178,12 @@ export function WalletConnectModal({
                 type="button"
                 onClick={onClose}
                 className={cn(
-                  "px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-primary",
+                  "flex-1 py-2.5 rounded-xl text-sm font-medium text-white",
+                  "bg-primary",
                   "shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
+                  "hover:bg-primary-hover hover:scale-[1.02]",
+                  "active:scale-[0.98]",
+                  "transition-all duration-150 cursor-pointer",
                 )}
               >
                 Done
@@ -226,27 +191,19 @@ export function WalletConnectModal({
             </div>
           </div>
         ) : (
-          <div className="mt-5">
+          <>
             {loadError ? (
-              <div
-                role="alert"
-                className="p-4 rounded-2xl bg-error/10 border border-error/20 text-sm text-error"
-              >
-                {loadError}
-              </div>
+              <p role="alert" className="text-sm text-error text-center py-4">{loadError}</p>
             ) : wallets === null ? (
-              <div
-                role="status"
-                aria-live="polite"
-                className="flex items-center justify-center gap-2 py-8 text-sm text-text-secondary"
-              >
+              <div role="status" className="flex items-center justify-center gap-2.5 py-10 text-sm text-text-secondary">
                 <LoadingSpinner size="sm" />
-                Loading wallets...
+                Detecting wallets…
               </div>
             ) : (
-              <ul className="space-y-3">
+              <ul className="space-y-2.5">
                 {wallets.map((wallet) => {
                   const isThisConnecting = connectingId === wallet.id;
+                  const available = wallet.isAvailable;
 
                   return (
                     <li key={wallet.id}>
@@ -255,49 +212,52 @@ export function WalletConnectModal({
                         onClick={() => handleConnect(wallet)}
                         disabled={isConnecting}
                         aria-busy={isThisConnecting}
-                        aria-label={
-                          wallet.isAvailable
-                            ? `Connect ${wallet.name}`
-                            : `Install ${wallet.name} (opens in a new tab)`
-                        }
+                        aria-label={available ? `Connect ${wallet.name}` : `Install ${wallet.name}`}
                         className={cn(
-                          "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-white text-left",
-                          "shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
-                          "hover:shadow-[2px_2px_4px_#d1d5db,-2px_-2px_4px_#ffffff]",
-                          "active:shadow-[inset_2px_2px_4px_#d1d5db,inset_-2px_-2px_4px_#ffffff]",
-                          "focus-visible:ring-2 focus-visible:ring-primary/40 outline-none",
-                          "transition-all duration-200",
-                          "disabled:opacity-50 disabled:cursor-not-allowed",
+                          "w-full flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-left",
+                          "bg-white transition-all duration-150 outline-none cursor-pointer",
+                          "focus-visible:ring-2 focus-visible:ring-primary/30",
+                          available
+                            ? [
+                                "shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
+                                "hover:shadow-[6px_6px_12px_#d1d5db,-6px_-6px_12px_#ffffff]",
+                                "active:shadow-[inset_3px_3px_6px_#d1d5db,inset_-3px_-3px_6px_#ffffff]",
+                              ]
+                            : "shadow-[2px_2px_4px_#d1d5db,-2px_-2px_4px_#ffffff] opacity-55",
+                          "disabled:cursor-not-allowed",
                         )}
                       >
                         <Image
                           src={wallet.icon}
                           alt=""
-                          width={32}
-                          height={32}
-                          className="w-8 h-8 rounded-lg shrink-0"
+                          width={40}
+                          height={40}
+                          className="w-10 h-10 rounded-xl shrink-0"
                         />
 
-                        <span className="flex-1 min-w-0">
-                          <span className="block font-semibold text-text-primary truncate">
+                        <div className="flex-1 min-w-0">
+                          <p className={cn(
+                            "font-semibold text-sm truncate",
+                            available ? "text-text-primary" : "text-text-secondary",
+                          )}>
                             {wallet.name}
-                          </span>
-                          {!wallet.isAvailable ? (
-                            <span className="block text-xs text-text-secondary">Not installed</span>
-                          ) : null}
-                        </span>
+                          </p>
+                          <p className="text-xs text-text-secondary mt-0.5">
+                            {available ? "Available" : "Not installed"}
+                          </p>
+                        </div>
 
-                        {isThisConnecting ? (
-                          <LoadingSpinner size="sm" />
-                        ) : wallet.isAvailable ? (
-                          <Icon
-                            path={ICON_PATHS.chevronRight}
-                            size="sm"
-                            className="text-text-secondary shrink-0"
-                          />
-                        ) : (
-                          <span className="text-xs font-medium text-primary shrink-0">Install</span>
-                        )}
+                        <div className="shrink-0 ml-1">
+                          {isThisConnecting ? (
+                            <LoadingSpinner size="sm" />
+                          ) : available ? (
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-text-secondary">
+                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            <span className="text-xs font-semibold text-primary">Install</span>
+                          )}
+                        </div>
                       </button>
                     </li>
                   );
@@ -305,15 +265,16 @@ export function WalletConnectModal({
               </ul>
             )}
 
-            {connectError ? (
-              <div
-                role="alert"
-                className="mt-4 p-3 rounded-xl bg-error/10 border border-error/20 text-xs text-error"
-              >
-                {connectError}
-              </div>
-            ) : null}
-          </div>
+            {connectError && (
+              <p role="alert" className="mt-3 text-xs text-error text-center">{connectError}</p>
+            )}
+
+            {wallets !== null && !loadError && (
+              <p className="mt-5 text-center text-xs text-text-secondary">
+                Your private keys never leave your wallet
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>,
