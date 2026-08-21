@@ -233,6 +233,17 @@ html:has(.app-no-scroll) body {
   }
 }
 
+@keyframes tabPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes scaleIn {
   from {
     opacity: 0;
@@ -362,6 +373,10 @@ html:has(.app-no-scroll) body {
 
 .animate-fade-in-up {
   animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.animate-tab-panel-in {
+  animation: tabPanelIn 0.22s ease-out forwards;
 }
 
 .animate-scale-in {

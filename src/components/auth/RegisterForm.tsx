@@ -333,160 +333,132 @@ export function RegisterForm() {
         })}
       </div>
 
-      {/* Wallet panel */}
-      <div
-        role="tabpanel"
-        id="register-panel-wallet"
-        aria-labelledby="register-tab-wallet"
-        hidden={activeTab !== "wallet"}
-        className="min-h-[22rem] flex flex-col justify-center gap-5"
-      >
-        <div className="text-center">
-          <h2 className="text-base font-semibold text-text-primary">Choose your wallet</h2>
-          <p className="text-xs text-text-secondary mt-1">Select a wallet to create your account</p>
-        </div>
-
-        <WalletSignInButton disabled={isLoading} onSignedIn={handleWalletSignedIn} />
-      </div>
-
-      {/* Email panel */}
-      <div
-        role="tabpanel"
-        id="register-panel-email"
-        aria-labelledby="register-tab-email"
-        hidden={activeTab !== "email"}
-      >
-        {/* Social Auth */}
-        <div
-          className="opacity-0 animate-fade-in-up"
-          style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}
-        >
-          <SocialAuthButtons />
-        </div>
-
-        {/* Divider */}
-        <div
-          className="opacity-0 animate-fade-in-up"
-          style={{ animationDelay: "0.15s", animationFillMode: "forwards" }}
-        >
-          <AuthDivider />
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-3">
+      {/* Method panel — keyed by activeTab so switching tabs remounts this
+          wrapper and replays the entrance animation, instead of an instant
+          swap between two permanently-mounted, hidden-toggled panels. */}
+      <div key={activeTab} className="animate-tab-panel-in">
+        {activeTab === "wallet" ? (
           <div
-            className="opacity-0 animate-fade-in-up"
-            style={{ animationDelay: "0.2s", animationFillMode: "forwards" }}
+            role="tabpanel"
+            id="register-panel-wallet"
+            aria-labelledby="register-tab-wallet"
+            className="min-h-[22rem] flex flex-col justify-center gap-5"
           >
-            <AuthInput
-              label="Email"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="you@example.com"
-              error={errors.email}
-              autoComplete="email"
-            />
-          </div>
+            <div className="text-center">
+              <h2 className="text-base font-semibold text-text-primary">Choose your wallet</h2>
+              <p className="text-xs text-text-secondary mt-1">
+                Select a wallet to create your account
+              </p>
+            </div>
 
-          <div
-            className="opacity-0 animate-fade-in-up"
-            style={{ animationDelay: "0.25s", animationFillMode: "forwards" }}
-          >
-            <AuthInput
-              label="Username"
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              placeholder="Choose a username"
-              error={errors.username}
-              autoComplete="username"
-            />
+            <WalletSignInButton disabled={isLoading} onSignedIn={handleWalletSignedIn} />
           </div>
+        ) : (
+          <div
+            role="tabpanel"
+            id="register-panel-email"
+            aria-labelledby="register-tab-email"
+          >
+            {/* Social Auth */}
+            <SocialAuthButtons />
 
-          <div
-            className="opacity-0 animate-fade-in-up"
-            style={{ animationDelay: "0.3s", animationFillMode: "forwards" }}
-          >
-            <AuthInput
-              label="Password"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              onFocus={() => setPasswordFocused(true)}
-              onBlur={() => setPasswordFocused(false)}
-              placeholder="Create a password"
-              error={errors.password}
-              autoComplete="new-password"
-            />
-            <PasswordRequirements
-              password={formData.password}
-              show={passwordFocused || formData.password.length > 0}
-            />
-          </div>
+            {/* Divider */}
+            <AuthDivider />
 
-          <div
-            className="opacity-0 animate-fade-in-up"
-            style={{ animationDelay: "0.35s", animationFillMode: "forwards" }}
-          >
-            <AuthInput
-              label="Confirm password"
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="Confirm your password"
-              error={errors.confirmPassword}
-              autoComplete="new-password"
-            />
-          </div>
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <AuthInput
+                label="Email"
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="you@example.com"
+                error={errors.email}
+                autoComplete="email"
+              />
 
-          {/* Submit Button */}
-          <div
-            className="opacity-0 animate-fade-in-up"
-            style={{ animationDelay: "0.4s", animationFillMode: "forwards" }}
-          >
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={cn(
-                "w-full px-6 py-3 rounded-xl font-medium mt-4 cursor-pointer",
-                "bg-primary text-white",
-                "shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
-                "hover:bg-primary-hover hover:shadow-[6px_6px_12px_#d1d5db,-6px_-6px_12px_#ffffff] hover:scale-[1.02]",
-                "active:shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2)] active:scale-[0.98]",
-                "disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100",
-                "transition-all duration-200"
-              )}
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Creating account...
-                </span>
-              ) : (
-                "Create account"
-              )}
-            </button>
+              <AuthInput
+                label="Username"
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                placeholder="Choose a username"
+                error={errors.username}
+                autoComplete="username"
+              />
+
+              <div>
+                <AuthInput
+                  label="Password"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                  placeholder="Create a password"
+                  error={errors.password}
+                  autoComplete="new-password"
+                />
+                <PasswordRequirements
+                  password={formData.password}
+                  show={passwordFocused || formData.password.length > 0}
+                />
+              </div>
+
+              <AuthInput
+                label="Confirm password"
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirm your password"
+                error={errors.confirmPassword}
+                autoComplete="new-password"
+              />
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={cn(
+                  "w-full px-6 py-3 rounded-xl font-medium mt-4 cursor-pointer",
+                  "bg-primary text-white",
+                  "shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
+                  "hover:bg-primary-hover hover:shadow-[6px_6px_12px_#d1d5db,-6px_-6px_12px_#ffffff] hover:scale-[1.02]",
+                  "active:shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2)] active:scale-[0.98]",
+                  "disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100",
+                  "transition-all duration-200"
+                )}
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Creating account...
+                  </span>
+                ) : (
+                  "Create account"
+                )}
+              </button>
+            </form>
           </div>
-        </form>
+        )}
       </div>
 
       {/* Login Link */}
