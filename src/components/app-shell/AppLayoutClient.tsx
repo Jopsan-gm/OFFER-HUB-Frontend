@@ -11,6 +11,7 @@ import { WalletConnectionBanner } from "@/components/wallet/WalletConnectionBann
 import { useAuthStore } from "@/stores/auth-store";
 import { isNewUser } from "@/lib/auth/is-new-user";
 import { sendVerification } from "@/lib/api/auth";
+import { useHasMounted } from "@/hooks/use-has-mounted";
 
 interface AppLayoutClientProps {
   children: React.ReactNode;
@@ -32,7 +33,18 @@ export function AppLayoutClient({ children }: AppLayoutClientProps): React.JSX.E
   // redirect used to be a side effect with no corresponding gate) let an
   // incomplete/logged-out user see a flash of real dashboard content for one
   // frame before the effect below kicked in.
-  const canRenderApp = hasHydrated && isAuthenticated && !needsOnboarding;
+  // `hasHydrated` starts false identically on server and client, so reading
+  // it alone can't cause a mismatch. But Next's App Router can re-render this
+  // layout on the server for a fresh navigation while the client's Zustand
+  // store is already hydrated from an earlier page in the same session — the
+  // server then computes canRenderApp from a cold `hasHydrated: false` while
+  // the client computes it from the real (already-true) value, and React
+  // throws the whole subtree away and repaints once it notices. `mounted` is
+  // false on every first render, server or client, however it got here — the
+  // one value Next can always reuse without a mismatch.
+  const mounted = useHasMounted();
+
+  const canRenderApp = mounted && hasHydrated && isAuthenticated && !needsOnboarding;
 
   useEffect(() => {
     if (!hasHydrated) return;
