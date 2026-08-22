@@ -55,8 +55,7 @@ export function WalletConnectButton({
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const walletAddress = useAuthStore((state) => state.walletAddress);
-  const walletConnected = useAuthStore((state) => state.walletConnected);
+  const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const disconnectWallet = useAuthStore((state) => state.disconnectWallet);
@@ -120,7 +119,12 @@ export function WalletConnectButton({
     return null;
   }
 
-  const address = walletConnected ? walletAddress : null;
+  // The account's actual linked wallet (backend truth), not the browser
+  // extension's live SWK session — that one persists across whatever
+  // OfferHub account is signed in, so this button (only ever rendered for an
+  // authenticated user, per the guard above) could otherwise show a wallet
+  // left over from a previous account in the same browser.
+  const address = user?.wallet?.publicKey ?? null;
 
   if (variant === "inline") {
     return (
