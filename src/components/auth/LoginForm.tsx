@@ -253,16 +253,18 @@ export function LoginForm() {
 
       {/* Method panel — keyed by activeTab so switching tabs remounts this
           wrapper and replays the entrance animation, instead of an instant
-          swap between two permanently-mounted, hidden-toggled panels. */}
-      <div key={activeTab} className="animate-tab-panel-in">
+          swap between two permanently-mounted, hidden-toggled panels.
+          min-h lives here (not on the wallet panel alone) so the card is the
+          same height under both tabs — otherwise the box snaps to its new
+          size the instant the panel remounts, which reads as an abrupt cut
+          no matter how smooth the fade itself is. */}
+      <div key={activeTab} className="animate-tab-panel-in min-h-[22rem]">
         {activeTab === "wallet" ? (
           <div
             role="tabpanel"
             id="auth-panel-wallet"
             aria-labelledby="auth-tab-wallet"
-            // Roughly the height of the email panel, so switching tabs does not
-            // collapse the card and shove the footer links up the page.
-            className="min-h-[22rem] flex flex-col justify-center gap-5"
+            className="h-full flex flex-col justify-center gap-5"
           >
             <div className="text-center">
               <h2 className="text-base font-semibold text-text-primary">Choose your wallet</h2>
