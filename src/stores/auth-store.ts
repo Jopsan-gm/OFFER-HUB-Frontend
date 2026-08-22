@@ -95,7 +95,18 @@ export const useAuthStore = create<AuthState>()(
       walletConnected: false,
       hasHydrated: false,
       login: (user, token) => {
-        set({ user, token, isAuthenticated: true });
+        // walletAddress/walletConnected are persisted to localStorage and
+        // otherwise survive a login as leftover state from whichever account
+        // was signed in before — a brand new account with nothing connected
+        // would show a previous session's wallet. Only trust a wallet here
+        // when this session's own user record actually has one.
+        set({
+          user,
+          token,
+          isAuthenticated: true,
+          walletAddress: user.wallet?.publicKey ?? null,
+          walletConnected: user.wallet != null,
+        });
       },
       logout: async () => {
         set({

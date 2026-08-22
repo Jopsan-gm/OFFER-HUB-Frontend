@@ -108,10 +108,14 @@ export function LoginForm() {
   };
 
   /**
-   * Wallet-first accounts have no firstName. Send those users to onboarding
-   * instead of the dashboard. Email login is unchanged.
+   * Any account with no firstName yet — wallet-first or a pre-#180 email
+   * registration that never collected one — needs onboarding before the
+   * dashboard, not after: RegisterForm doesn't ask for a name at all, so a
+   * fresh email account is just as "new" as a wallet one. Routing here
+   * unconditionally used to send those users to the dashboard first, which
+   * AppLayoutClient immediately bounced back out to /onboarding.
    */
-  const handleWalletSignedIn = () => {
+  const goToDashboardOrOnboarding = () => {
     const user = useAuthStore.getState().user;
     if (user && isNewUser(user)) {
       router.push("/onboarding");
@@ -119,6 +123,10 @@ export function LoginForm() {
     }
 
     goToDashboard();
+  };
+
+  const handleWalletSignedIn = () => {
+    goToDashboardOrOnboarding();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -162,7 +170,7 @@ export function LoginForm() {
 
       setIsLoading(false);
 
-      goToDashboard();
+      goToDashboardOrOnboarding();
     } catch (error) {
       console.error("Login error:", error);
       setErrors({ email: "Connection error. Please try again." });
