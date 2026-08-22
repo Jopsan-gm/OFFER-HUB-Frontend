@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthInput } from "@/components/auth/AuthInput";
+import { WalletConnectModal } from "@/components/wallet/WalletConnectModal";
 import { cn } from "@/lib/cn";
 import { updateProfile, ProfileApiError } from "@/lib/api/profile";
 import { useAuthStore, type User } from "@/stores/auth-store";
@@ -72,13 +73,14 @@ export function WalletOnboardingForm() {
   const token = useAuthStore((state) => state.token);
   const login = useAuthStore((state) => state.login);
   // The account's actual linked wallet (backend truth), not the browser
-  // extension's live SWK session (`walletAddress` in the store) — that one
+  // extension's live SWK session (`walletAddress` in the store). That one
   // persists across whatever OfferHub account is logged in, so a brand new
   // account with nothing connected could otherwise show a wallet chip left
   // over from a previous session in the same browser.
   const walletAddress = user?.wallet?.publicKey ?? null;
 
   const [step, setStep] = useState<1 | 2>(1);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   const [step1, setStep1] = useState<OnboardingStep1Values>({
     firstName: "",
@@ -279,7 +281,7 @@ export function WalletOnboardingForm() {
           </div>
 
           {/* Already chosen at registration (typed for email, auto-generated
-              for wallet-first) — onboarding collects the rest of the
+              for wallet-first). Onboarding collects the rest of the
               profile, not a rename. Change it later from account settings. */}
           <AuthInput
             label="Username"
@@ -382,6 +384,31 @@ export function WalletOnboardingForm() {
             />
           )}
 
+          {!walletAddress && (
+            <div className="flex items-center justify-between gap-3 py-1">
+              <p className="text-sm font-medium text-text-primary">
+                Connect a wallet{" "}
+                <span className="text-xs font-normal text-text-secondary">
+                  (Freighter, Lobstr, xBull)
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsWalletModalOpen(true)}
+                className={cn(
+                  "shrink-0 px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer",
+                  "text-emerald-600 bg-[#F3F4F6]",
+                  "shadow-[3px_3px_6px_#d1d5db,-3px_-3px_6px_#ffffff]",
+                  "hover:shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
+                  "active:shadow-[inset_2px_2px_4px_#d1d5db,inset_-2px_-2px_4px_#ffffff]",
+                  "transition-all duration-150",
+                )}
+              >
+                Connect wallet
+              </button>
+            </div>
+          )}
+
           {submitError && (
             <div className="p-3 rounded-xl bg-error/10 text-error text-sm">{submitError}</div>
           )}
@@ -401,6 +428,12 @@ export function WalletOnboardingForm() {
           >
             {isSubmitting ? "Saving..." : needsStep2 ? "Continue" : "Get started"}
           </button>
+
+          <WalletConnectModal
+            isOpen={isWalletModalOpen}
+            onClose={() => setIsWalletModalOpen(false)}
+            onConnected={() => setIsWalletModalOpen(false)}
+          />
         </form>
       )}
 
