@@ -36,7 +36,7 @@ export interface OAuthCallbackResult {
     lastName: string | null;
     type: string;
     balance: { available: string; reserved: string } | null;
-    wallet: { publicKey: string; type: string } | null;
+    wallet: { id: string; publicKey: string; type: string } | null;
   };
   token: string;
 }

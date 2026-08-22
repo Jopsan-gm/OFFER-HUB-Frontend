@@ -139,3 +139,49 @@ export async function connectWallet(
 
   return toConnectedWallets(payload.data);
 }
+
+/**
+ * Deactivate `walletId` on the signed-in account (`POST /wallet/disconnect`).
+ *
+ * The row is kept, never deleted, as audit history — this just flips
+ * `isActive`/`isPrimary` off. Disconnecting the account's current primary
+ * wallet does not auto-promote another one.
+ *
+ * @throws {ConnectWalletError} for every refusal, with the API's code attached.
+ */
+export async function disconnectWallet(token: string, walletId: string): Promise<ConnectedWallet[]> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}/wallet/disconnect`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ walletId }),
+    });
+  } catch {
+    throw new ConnectWalletError(
+      "Could not reach the server. Check your connection and try again.",
+      "NETWORK_ERROR",
+      0
+    );
+  }
+
+  if (!response.ok) {
+    throw await toConnectError(response);
+  }
+
+  const payload: unknown = await response.json();
+  if (!isRecord(payload) || !Array.isArray(payload.data)) {
+    throw new ConnectWalletError(
+      "The server returned an unexpected response.",
+      "MALFORMED_RESPONSE",
+      response.status
+    );
+  }
+
+  return toConnectedWallets(payload.data);
+}

@@ -95,7 +95,7 @@ export function WalletConnectModal({
         });
         const primary = wallets.find((w) => w.isPrimary);
         if (primary) {
-          setPrimaryWallet({ publicKey: primary.publicKey, type: primary.type });
+          setPrimaryWallet({ id: primary.id, publicKey: primary.publicKey, type: primary.type });
         }
       }
 

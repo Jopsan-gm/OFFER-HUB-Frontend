@@ -131,6 +131,7 @@ describe("WalletConnectModal — persisting the link server-side", () => {
 
     await waitFor(() =>
       expect(mockSetPrimaryWallet).toHaveBeenCalledWith({
+        id: "wal_1",
         publicKey: PUBLIC_KEY,
         type: "EXTERNAL",
       })

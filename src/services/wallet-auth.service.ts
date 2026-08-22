@@ -179,7 +179,11 @@ function toUser(payload: Record<string, unknown>): User {
     type: toUserType(payload.type),
     wallet:
       wallet && typeof wallet.publicKey === "string"
-        ? { publicKey: wallet.publicKey, type: readString(wallet.type) ?? "EXTERNAL" }
+        ? {
+            id: readString(wallet.id) ?? undefined,
+            publicKey: wallet.publicKey,
+            type: readString(wallet.type) ?? "EXTERNAL",
+          }
         : undefined,
   };
 }
