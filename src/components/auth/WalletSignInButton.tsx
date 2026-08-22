@@ -50,10 +50,10 @@ export function WalletSignInButton({
   }
 
   return (
-    <div className={cn("flex flex-col gap-3", className)}>
+    <div className={cn("flex flex-col gap-6", className)}>
 
       {/* Supported wallet logos */}
-      <div className="flex items-center justify-center gap-4">
+      <div className="flex items-center justify-center gap-6">
         {WALLETS.map((wallet) => (
           <div key={wallet.id} className="flex flex-col items-center gap-1" title={wallet.name}>
             <span className="shadow-[2px_2px_4px_#d1d5db,-2px_-2px_4px_#ffffff] rounded-xl p-0.5 bg-white">
@@ -71,7 +71,7 @@ export function WalletSignInButton({
         disabled={disabled || isAuthenticating}
         aria-busy={isAuthenticating}
         className={cn(
-          "w-full px-6 py-3 rounded-xl font-medium mt-1 cursor-pointer",
+          "w-full px-6 py-3 rounded-xl font-medium cursor-pointer",
           "bg-primary text-white",
           "shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
           "hover:bg-primary-hover hover:shadow-[6px_6px_12px_#d1d5db,-6px_-6px_12px_#ffffff] hover:scale-[1.02]",
@@ -93,7 +93,7 @@ export function WalletSignInButton({
       </button>
 
       {/* Security note */}
-      <p className="text-center text-[11px] text-text-secondary leading-snug">
+      <p className="text-center text-xs text-text-secondary leading-relaxed">
         Your keys never leave your wallet.{" "}
         <span className="text-text-tertiary">No password required.</span>
       </p>

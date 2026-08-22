@@ -350,11 +350,11 @@ export function RegisterForm() {
             role="tabpanel"
             id="register-panel-wallet"
             aria-labelledby="register-tab-wallet"
-            className="flex flex-col gap-5"
+            className="flex flex-col gap-8 px-2"
           >
             <div className="text-center">
-              <h2 className="text-base font-semibold text-text-primary">Choose your wallet</h2>
-              <p className="text-xs text-text-secondary mt-1">
+              <h2 className="text-lg font-semibold text-text-primary">Choose your wallet</h2>
+              <p className="text-sm text-text-secondary mt-2">
                 Select a wallet to create your account
               </p>
             </div>
