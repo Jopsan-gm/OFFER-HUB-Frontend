@@ -9,6 +9,7 @@ import { WalletAddress } from "@/components/ui/WalletAddress";
 import { WalletConnectModal } from "@/components/wallet/WalletConnectModal";
 import { DROPDOWN_MENU, DROPDOWN_ITEM_DANGER } from "@/lib/styles";
 import { useAuthStore } from "@/stores/auth-store";
+import { disconnectWallet as disconnectWalletApi } from "@/lib/api/wallet-connect";
 
 export interface WalletConnectButtonProps {
   /**
@@ -55,11 +56,13 @@ export function WalletConnectButton({
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const walletAddress = useAuthStore((state) => state.walletAddress);
-  const walletConnected = useAuthStore((state) => state.walletConnected);
+  const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const disconnectWallet = useAuthStore((state) => state.disconnectWallet);
+  const setPrimaryWallet = useAuthStore((state) => state.setPrimaryWallet);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -87,6 +90,23 @@ export function WalletConnectButton({
   }, [isMenuOpen]);
 
   async function handleDisconnect(): Promise<void> {
+    // Unlink the account's actual wallet server-side — clearing only the
+    // local SWK session (below) left the header showing a real, backend-
+    // linked wallet as still connected no matter how many times "Disconnect"
+    // was clicked, because nothing had ever asked the backend to drop it.
+    const walletId = user?.wallet?.id;
+    if (walletId && token) {
+      setIsDisconnecting(true);
+      try {
+        await disconnectWalletApi(token, walletId);
+        setPrimaryWallet(undefined);
+      } catch (error) {
+        console.error("Failed to disconnect wallet from the account:", error);
+      } finally {
+        setIsDisconnecting(false);
+      }
+    }
+
     try {
       await StellarWalletsKit.disconnect();
     } catch (error) {
@@ -120,7 +140,12 @@ export function WalletConnectButton({
     return null;
   }
 
-  const address = walletConnected ? walletAddress : null;
+  // The account's actual linked wallet (backend truth), not the browser
+  // extension's live SWK session — that one persists across whatever
+  // OfferHub account is signed in, so this button (only ever rendered for an
+  // authenticated user, per the guard above) could otherwise show a wallet
+  // left over from a previous account in the same browser.
+  const address = user?.wallet?.publicKey ?? null;
 
   if (variant === "inline") {
     return (
@@ -143,10 +168,15 @@ export function WalletConnectButton({
             <button
               type="button"
               onClick={handleDisconnect}
-              className={cn(TRIGGER_BASE, "w-full justify-center px-5 py-3 text-sm text-error")}
+              disabled={isDisconnecting}
+              className={cn(
+                TRIGGER_BASE,
+                "w-full justify-center px-5 py-3 text-sm text-error",
+                "disabled:opacity-60 disabled:cursor-not-allowed"
+              )}
             >
               <Icon path={ICON_PATHS.logout} size="sm" />
-              Disconnect
+              {isDisconnecting ? "Disconnecting..." : "Disconnect"}
             </button>
           </>
         )}
@@ -217,10 +247,15 @@ export function WalletConnectButton({
               </div>
 
               <div className="pt-2">
-                <button type="button" onClick={handleDisconnect} className={DROPDOWN_ITEM_DANGER}>
+                <button
+                  type="button"
+                  onClick={handleDisconnect}
+                  disabled={isDisconnecting}
+                  className={cn(DROPDOWN_ITEM_DANGER, "disabled:opacity-60 disabled:cursor-not-allowed")}
+                >
                   <div className="flex items-center gap-3">
                     <Icon path={ICON_PATHS.logout} size="sm" />
-                    <span>Disconnect</span>
+                    <span>{isDisconnecting ? "Disconnecting..." : "Disconnect"}</span>
                   </div>
                 </button>
               </div>

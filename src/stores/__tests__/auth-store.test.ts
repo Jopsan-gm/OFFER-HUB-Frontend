@@ -40,6 +40,30 @@ describe('auth-store', () => {
       expect(state.token).toBe(TOKEN);
       expect(state.isAuthenticated).toBe(true);
     });
+
+    it('does not carry a previous session\'s wallet into a new account that has none', () => {
+      // Simulate a wallet connected under a prior account in the same browser
+      // (walletAddress/walletConnected are persisted to localStorage, so this
+      // survives a plain page reload, not just an in-memory switch).
+      act(() => { useAuthStore.getState().connectWallet('GOLD_ACCOUNT_WALLET'); });
+
+      act(() => { useAuthStore.getState().login(MOCK_USER, TOKEN); });
+
+      const state = useAuthStore.getState();
+      expect(state.walletAddress).toBeNull();
+      expect(state.walletConnected).toBe(false);
+    });
+
+    it('reflects the logging-in account\'s own wallet when it has one', () => {
+      act(() => { useAuthStore.getState().connectWallet('GSTALE_FROM_BEFORE'); });
+
+      const walletUser = { ...MOCK_USER, wallet: { publicKey: 'GNEW_ACCOUNT_WALLET', type: 'EXTERNAL' } };
+      act(() => { useAuthStore.getState().login(walletUser, TOKEN); });
+
+      const state = useAuthStore.getState();
+      expect(state.walletAddress).toBe('GNEW_ACCOUNT_WALLET');
+      expect(state.walletConnected).toBe(true);
+    });
   });
 
   describe('logout', () => {

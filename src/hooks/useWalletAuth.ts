@@ -9,11 +9,12 @@ import {
   WalletAuthError,
   type WalletSession,
 } from "@/services/wallet-auth.service";
+import { isWalletCancellation, WALLET_CANCELLED_MESSAGE } from "@/lib/wallet-error-messages";
 
 /**
  * Where the flow currently is. Each value maps to a distinct thing the user is
- * waiting on, so the UI can say "check your wallet" instead of a generic spinner
- * — the signing step is the one that blocks on a browser extension popup and is
+ * waiting on, so the UI can say "check your wallet" instead of a generic spinner.
+ * The signing step is the one that blocks on a browser extension popup and is
  * by far the slowest.
  */
 export type WalletAuthStep = "idle" | "requesting-challenge" | "signing" | "verifying";
@@ -36,6 +37,14 @@ export interface UseWalletAuthResult {
  * the user has no way to act on.
  */
 function toUserMessage(error: unknown): string {
+  // Declining the connection or signature prompt in the wallet extension
+  // throws a raw, technical, extension-specific message (Freighter, Lobstr
+  // and xBull each word it differently). Showing that directly reads as a
+  // broken app rather than something the user just did on purpose.
+  if (isWalletCancellation(error)) {
+    return WALLET_CANCELLED_MESSAGE;
+  }
+
   if (error instanceof WalletAuthError) {
     switch (error.code) {
       case "WALLET_CHALLENGE_EXPIRED":
@@ -95,7 +104,7 @@ export function useWalletAuth(): UseWalletAuthResult {
 
       try {
         // Fetch the address directly from the wallet extension right before
-        // requesting the challenge — the cached `publicKey` may be stale if
+        // requesting the challenge, since the cached `publicKey` may be stale if
         // the user switched accounts in Freighter since connecting.
         setStep("requesting-challenge");
         const { address: liveAddress } = await StellarWalletsKit.fetchAddress();
@@ -111,7 +120,7 @@ export function useWalletAuth(): UseWalletAuthResult {
         // The signer address returned by the wallet is authoritative.
         // If it differs from the challenge key (Freighter ignored the address
         // hint or the user switched accounts mid-flow), the challenge record
-        // in Redis won't match — surface a clear error instead of a confusing 401.
+        // in Redis won't match, so surface a clear error instead of a confusing 401.
         const effectiveKey = signerAddress || challengeKey;
         if (effectiveKey !== challengeKey) {
           throw new Error(

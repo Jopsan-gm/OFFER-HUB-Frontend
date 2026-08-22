@@ -207,13 +207,21 @@ export function RegisterForm() {
 
       setIsLoading(false);
 
-      const defaultDashboard =
-        mode === "client" ? "/app/client/dashboard" : "/app/freelancer/dashboard";
+      // A fresh email registration never has firstName set — it always needs
+      // onboarding. Sending it to the dashboard first (as this used to do
+      // unconditionally) just meant AppLayoutClient bounced it straight back
+      // out to /onboarding, flashing the dashboard shell in between.
+      const registeredUser = useAuthStore.getState().user;
+      const destination =
+        registeredUser && isNewUser(registeredUser)
+          ? "/onboarding"
+          : mode === "client"
+            ? "/app/client/dashboard"
+            : "/app/freelancer/dashboard";
 
-      // Redirect to dashboard after success animation
       localStorage.setItem("show-onboarding-tour", "true");
       setTimeout(() => {
-        window.location.href = defaultDashboard;
+        window.location.href = destination;
       }, 1500);
     } catch (error) {
       console.error("Register error:", error);

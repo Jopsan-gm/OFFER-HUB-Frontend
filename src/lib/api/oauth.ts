@@ -32,9 +32,11 @@ export interface OAuthCallbackResult {
     id: string;
     email: string;
     username: string;
+    firstName: string | null;
+    lastName: string | null;
     type: string;
     balance: { available: string; reserved: string } | null;
-    wallet: { publicKey: string; type: string } | null;
+    wallet: { id: string; publicKey: string; type: string } | null;
   };
   token: string;
 }

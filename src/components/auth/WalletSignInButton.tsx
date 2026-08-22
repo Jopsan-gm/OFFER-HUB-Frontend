@@ -5,7 +5,6 @@ import Image from "next/image";
 import { cn } from "@/lib/cn";
 import { LoadingSpinner } from "@/components/ui/Icon";
 import { WalletConnectModal } from "@/components/wallet/WalletConnectModal";
-import { useWalletKit } from "@/hooks/use-wallet-kit";
 import { useWalletAuth, type WalletAuthStep } from "@/hooks/useWalletAuth";
 
 export interface WalletSignInButtonProps {
@@ -32,7 +31,6 @@ export function WalletSignInButton({
   className,
 }: WalletSignInButtonProps): React.JSX.Element {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { address } = useWalletKit();
   const { signIn, step, isAuthenticating, error, reset } = useWalletAuth();
 
   async function runSignIn(publicKey: string): Promise<void> {
@@ -40,13 +38,13 @@ export function WalletSignInButton({
     if (session !== null) onSignedIn?.();
   }
 
-  async function handleConnect(): Promise<void> {
+  // Always open the picker. Stellar Wallets Kit remembers the last wallet
+  // you picked (e.g. xBull) across visits, so silently reusing that instead
+  // of asking meant every future sign-in skipped straight to it with no way
+  // to pick a different one.
+  function handleConnect(): void {
     reset();
-    if (address !== null) {
-      await runSignIn(address);
-    } else {
-      setIsModalOpen(true);
-    }
+    setIsModalOpen(true);
   }
 
   return (
@@ -64,7 +62,7 @@ export function WalletSignInButton({
         ))}
       </div>
 
-      {/* Primary CTA — matches the email sign-in button style */}
+      {/* Primary CTA, matches the email sign-in button style */}
       <button
         type="button"
         onClick={handleConnect}

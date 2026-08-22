@@ -14,6 +14,7 @@ interface AuthInputProps {
   placeholder?: string;
   error?: string;
   autoComplete?: string;
+  readOnly?: boolean;
 }
 
 export function AuthInput({
@@ -27,6 +28,7 @@ export function AuthInput({
   placeholder,
   error,
   autoComplete,
+  readOnly,
 }: AuthInputProps) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
@@ -47,13 +49,16 @@ export function AuthInput({
           onBlur={onBlur}
           placeholder={placeholder}
           autoComplete={autoComplete}
+          readOnly={readOnly}
+          aria-readonly={readOnly}
           className={cn(
             "w-full px-4 py-3 rounded-xl text-sm",
             "bg-background text-text-primary placeholder-text-secondary/50",
             "shadow-[inset_2px_2px_4px_#d1d5db,inset_-2px_-2px_4px_#ffffff]",
             "focus:outline-none focus:ring-2 focus:ring-primary/30",
             "transition-all duration-200",
-            error && "ring-2 ring-error/30"
+            error && "ring-2 ring-error/30",
+            readOnly && "cursor-default opacity-60 focus:ring-0"
           )}
         />
         {isPassword && (

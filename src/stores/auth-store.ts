@@ -8,6 +8,8 @@ export interface UserBalance {
 }
 
 export interface UserWallet {
+  /** Present when the wallet came from the backend (login/OAuth/wallet-verify/connect); absent for the plain SWK-mirrored shape some older call sites still construct. */
+  id?: string;
   publicKey: string;
   type: string;
 }
@@ -50,6 +52,12 @@ interface AuthState extends WalletConnectionState {
   setLoading: (loading: boolean) => void;
   setRedirectAfterLogin: (path: string | null) => void;
   setHasHydrated: (value: boolean) => void;
+  /**
+   * Reflects the account's primary wallet (backend source of truth) onto
+   * `user.wallet` — e.g. after `POST /wallet/connect` links a new one. A
+   * no-op if nothing is signed in yet.
+   */
+  setPrimaryWallet: (wallet: UserWallet | undefined) => void;
 }
 
 /**
@@ -89,7 +97,18 @@ export const useAuthStore = create<AuthState>()(
       walletConnected: false,
       hasHydrated: false,
       login: (user, token) => {
-        set({ user, token, isAuthenticated: true });
+        // walletAddress/walletConnected are persisted to localStorage and
+        // otherwise survive a login as leftover state from whichever account
+        // was signed in before — a brand new account with nothing connected
+        // would show a previous session's wallet. Only trust a wallet here
+        // when this session's own user record actually has one.
+        set({
+          user,
+          token,
+          isAuthenticated: true,
+          walletAddress: user.wallet?.publicKey ?? null,
+          walletConnected: user.wallet != null,
+        });
       },
       logout: async () => {
         set({
@@ -106,6 +125,8 @@ export const useAuthStore = create<AuthState>()(
       connectWallet: (address) => set({ walletAddress: address, walletConnected: true }),
       disconnectWallet: () => set({ walletAddress: null, walletConnected: false }),
       setHasHydrated: (value) => set({ hasHydrated: value }),
+      setPrimaryWallet: (wallet) =>
+        set((state) => (state.user ? { user: { ...state.user, wallet } } : state)),
     }),
     {
       name: "auth-state",

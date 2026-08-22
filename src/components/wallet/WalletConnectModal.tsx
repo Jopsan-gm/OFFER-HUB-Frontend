@@ -6,22 +6,18 @@ import Image from "next/image";
 import { StellarWalletsKit, type ISupportedWallet } from "@creit.tech/stellar-wallets-kit";
 import { cn } from "@/lib/cn";
 import { LoadingSpinner } from "@/components/ui/Icon";
-import { useWalletKit } from "@/hooks/use-wallet-kit";
 import { useAuthStore } from "@/stores/auth-store";
+import { requestChallenge } from "@/services/wallet-auth.service";
+import {
+  connectWallet as connectWalletApi,
+  disconnectWallet as disconnectWalletApi,
+} from "@/lib/api/wallet-connect";
+import { toWalletErrorMessage } from "@/lib/wallet-error-messages";
 
 export interface WalletConnectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConnected?: (address: string) => void;
-}
-
-function toErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "object" && error !== null && "message" in error) {
-    const { message } = error as { message: unknown };
-    if (typeof message === "string" && message.length > 0) return message;
-  }
-  return fallback;
 }
 
 function truncateAddress(address: string): string {
@@ -33,14 +29,21 @@ export function WalletConnectModal({
   onClose,
   onConnected,
 }: WalletConnectModalProps): React.JSX.Element | null {
-  const { address } = useWalletKit();
+  const user = useAuthStore((state) => state.user);
   const connectWallet = useAuthStore((state) => state.connectWallet);
   const disconnectWallet = useAuthStore((state) => state.disconnectWallet);
+  const setPrimaryWallet = useAuthStore((state) => state.setPrimaryWallet);
+  const token = useAuthStore((state) => state.token);
+
+  // The one thing this modal should ever call "connected": a wallet the
+  // backend has actually confirmed belongs to the signed-in account.
+  const linkedWallet = user?.wallet ?? null;
 
   const [wallets, setWallets] = useState<ISupportedWallet[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +52,7 @@ export function WalletConnectModal({
     let cancelled = false;
     StellarWalletsKit.refreshSupportedWallets()
       .then((supported) => { if (!cancelled) { setWallets(supported); setLoadError(null); } })
-      .catch((err: unknown) => { if (!cancelled) setLoadError(toErrorMessage(err, "Could not load wallets.")); });
+      .catch((err: unknown) => { if (!cancelled) setLoadError(toWalletErrorMessage(err, "Could not load wallets.")); });
     return () => { cancelled = true; };
   }, [isOpen]);
 
@@ -73,17 +76,51 @@ export function WalletConnectModal({
     try {
       StellarWalletsKit.setWallet(wallet.id);
       const { address: connected } = await StellarWalletsKit.fetchAddress();
+
+      // Signed in already: prove ownership of this key and persist the link
+      // server-side, the same way wallet sign-in does, so the account's
+      // primary-wallet state (and anything gated on it, like the "connect
+      // your wallet" banner) actually reflects reality instead of only this
+      // browser's local SWK session.
+      if (token) {
+        const { challenge } = await requestChallenge(connected);
+        const { signedMessage } = await StellarWalletsKit.signMessage(challenge, {
+          address: connected,
+        });
+        const wallets = await connectWalletApi(token, {
+          publicKey: connected,
+          signature: signedMessage,
+          challenge,
+        });
+        const primary = wallets.find((w) => w.isPrimary);
+        if (primary) {
+          setPrimaryWallet({ id: primary.id, publicKey: primary.publicKey, type: primary.type });
+        }
+      }
+
       connectWallet(connected);
       onConnected?.(connected);
       onClose();
     } catch (err) {
-      setConnectError(toErrorMessage(err, `Could not connect to ${wallet.name}. Please try again.`));
+      setConnectError(toWalletErrorMessage(err, `Could not connect to ${wallet.name}. Please try again.`));
     } finally {
       setConnectingId(null);
     }
   }
 
   async function handleDisconnect() {
+    if (linkedWallet?.id && token) {
+      setIsDisconnecting(true);
+      try {
+        await disconnectWalletApi(token, linkedWallet.id);
+        setPrimaryWallet(undefined);
+      } catch (err) {
+        console.error("Failed to disconnect wallet from the account:", err);
+      } finally {
+        setIsDisconnecting(false);
+      }
+    }
+
     await StellarWalletsKit.disconnect();
     disconnectWallet();
   }
@@ -117,10 +154,10 @@ export function WalletConnectModal({
         <div className="flex items-start justify-between mb-5">
           <div>
             <h2 id="wc-title" className="text-lg font-bold text-text-primary">
-              {address ? "Wallet connected" : "Connect wallet"}
+              {linkedWallet ? "Wallet connected" : "Connect wallet"}
             </h2>
             <p className="text-sm text-text-secondary mt-0.5">
-              {address ? "Your Stellar wallet is active" : "Choose a wallet to sign in securely"}
+              {linkedWallet ? "Your Stellar wallet is active" : "Choose a wallet to sign in securely"}
             </p>
           </div>
 
@@ -148,14 +185,14 @@ export function WalletConnectModal({
         <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-5" />
 
         {/* Content */}
-        {address ? (
+        {linkedWallet ? (
           <div className="space-y-4">
             <div className="rounded-xl p-4 shadow-[inset_3px_3px_6px_#d1d5db,inset_-3px_-3px_6px_#ffffff]">
               <p className="text-xs font-medium text-text-secondary mb-1.5">Connected address</p>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                 <p className="font-mono text-sm font-semibold text-text-primary truncate">
-                  {truncateAddress(address)}
+                  {truncateAddress(linkedWallet.publicKey)}
                 </p>
               </div>
             </div>
@@ -164,15 +201,17 @@ export function WalletConnectModal({
               <button
                 type="button"
                 onClick={handleDisconnect}
+                disabled={isDisconnecting}
                 className={cn(
                   "flex-1 py-2.5 rounded-xl text-sm font-medium",
                   "text-text-secondary bg-white",
                   "shadow-[3px_3px_6px_#d1d5db,-3px_-3px_6px_#ffffff]",
                   "hover:text-error active:shadow-[inset_2px_2px_4px_#d1d5db,inset_-2px_-2px_4px_#ffffff]",
                   "transition-all duration-150 cursor-pointer",
+                  "disabled:opacity-60 disabled:cursor-not-allowed",
                 )}
               >
-                Disconnect
+                {isDisconnecting ? "Disconnecting..." : "Disconnect"}
               </button>
               <button
                 type="button"

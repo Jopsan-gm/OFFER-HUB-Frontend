@@ -71,7 +71,12 @@ export function WalletOnboardingForm() {
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
   const login = useAuthStore((state) => state.login);
-  const walletAddress = useAuthStore((state) => state.walletAddress);
+  // The account's actual linked wallet (backend truth), not the browser
+  // extension's live SWK session (`walletAddress` in the store) — that one
+  // persists across whatever OfferHub account is logged in, so a brand new
+  // account with nothing connected could otherwise show a wallet chip left
+  // over from a previous session in the same browser.
+  const walletAddress = user?.wallet?.publicKey ?? null;
 
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -273,6 +278,9 @@ export function WalletOnboardingForm() {
             />
           </div>
 
+          {/* Already chosen at registration (typed for email, auto-generated
+              for wallet-first) — onboarding collects the rest of the
+              profile, not a rename. Change it later from account settings. */}
           <AuthInput
             label="Username"
             type="text"
@@ -282,6 +290,7 @@ export function WalletOnboardingForm() {
             error={step1Errors.username}
             placeholder="jane_dev"
             autoComplete="username"
+            readOnly
           />
 
           {/* Role selector */}
