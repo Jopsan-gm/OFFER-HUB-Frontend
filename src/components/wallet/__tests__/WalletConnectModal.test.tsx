@@ -23,18 +23,16 @@ vi.mock("next/image", () => ({
   default: (props: { alt: string }) => <span>{props.alt}</span>,
 }));
 
-vi.mock("@/hooks/use-wallet-kit", () => ({
-  useWalletKit: () => ({ address: null }),
-}));
-
 const mockRequestChallenge = vi.fn();
 vi.mock("@/services/wallet-auth.service", () => ({
   requestChallenge: (...args: unknown[]) => mockRequestChallenge(...args),
 }));
 
 const mockConnectWalletApi = vi.fn();
+const mockDisconnectWalletApi = vi.fn();
 vi.mock("@/lib/api/wallet-connect", () => ({
   connectWallet: (...args: unknown[]) => mockConnectWalletApi(...args),
+  disconnectWallet: (...args: unknown[]) => mockDisconnectWalletApi(...args),
   ConnectWalletError: class ConnectWalletError extends Error {
     code: string;
     status: number;
@@ -50,10 +48,12 @@ const mockConnectWallet = vi.fn();
 const mockDisconnectWallet = vi.fn();
 const mockSetPrimaryWallet = vi.fn();
 let mockToken: string | null = "jwt-token";
+let mockUser: { id: string; wallet?: { id: string; publicKey: string; type: string } } | null = null;
 
 vi.mock("@/stores/auth-store", () => ({
   useAuthStore: (
     selector: (s: {
+      user: typeof mockUser;
       connectWallet: typeof mockConnectWallet;
       disconnectWallet: typeof mockDisconnectWallet;
       setPrimaryWallet: typeof mockSetPrimaryWallet;
@@ -61,6 +61,7 @@ vi.mock("@/stores/auth-store", () => ({
     }) => unknown
   ) =>
     selector({
+      user: mockUser,
       connectWallet: mockConnectWallet,
       disconnectWallet: mockDisconnectWallet,
       setPrimaryWallet: mockSetPrimaryWallet,
@@ -82,10 +83,12 @@ const FREIGHTER = {
 
 function setup() {
   mockToken = "jwt-token";
+  mockUser = { id: "usr_1" };
   mockRefreshSupportedWallets.mockResolvedValue([FREIGHTER]);
   mockFetchAddress.mockResolvedValue({ address: PUBLIC_KEY });
   mockRequestChallenge.mockResolvedValue({ challenge: CHALLENGE, expiresIn: 300 });
   mockSignMessage.mockResolvedValue({ signedMessage: SIGNED, signerAddress: PUBLIC_KEY });
+  mockDisconnectWalletApi.mockResolvedValue([]);
   mockConnectWalletApi.mockResolvedValue([
     {
       id: "wal_1",
@@ -178,5 +181,37 @@ describe("WalletConnectModal — persisting the link server-side", () => {
     await waitFor(() => expect(mockConnectWallet).toHaveBeenCalledWith(PUBLIC_KEY));
     expect(mockConnectWalletApi).not.toHaveBeenCalled();
     expect(mockRequestChallenge).not.toHaveBeenCalled();
+  });
+});
+
+describe("WalletConnectModal — display reflects the account, not the browser session", () => {
+  const OTHER_ACCOUNTS_KEY = "GBUFHWMF2GCVS3MEBM7Q55XR73UHUVI5VYUDHSEXTHAJXORYULOX274N";
+
+  it("shows the wallet-selection list, not a false \"connected\" state, when the account has no linked wallet", async () => {
+    mockUser = { id: "usr_1" }; // no `wallet` — nothing linked to this account
+    render(<WalletConnectModal isOpen onClose={vi.fn()} />);
+
+    expect(screen.getByText("Connect wallet")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Connect Freighter" })).toBeInTheDocument();
+    expect(screen.queryByText("Wallet connected")).not.toBeInTheDocument();
+  });
+
+  it("shows connected only once the account's own linked wallet is present, using its address", () => {
+    mockUser = { id: "usr_1", wallet: { id: "wal_1", publicKey: OTHER_ACCOUNTS_KEY, type: "EXTERNAL" } };
+    render(<WalletConnectModal isOpen onClose={vi.fn()} />);
+
+    expect(screen.getByText("Wallet connected")).toBeInTheDocument();
+    expect(screen.getByText("GBUFHWMF…ULOX274N")).toBeInTheDocument();
+  });
+
+  it("disconnecting calls the backend with the linked wallet's id, then clears it from the store", async () => {
+    mockUser = { id: "usr_1", wallet: { id: "wal_1", publicKey: OTHER_ACCOUNTS_KEY, type: "EXTERNAL" } };
+    const user = userEvent.setup();
+    render(<WalletConnectModal isOpen onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Disconnect" }));
+
+    await waitFor(() => expect(mockDisconnectWalletApi).toHaveBeenCalledWith("jwt-token", "wal_1"));
+    expect(mockSetPrimaryWallet).toHaveBeenCalledWith(undefined);
   });
 });

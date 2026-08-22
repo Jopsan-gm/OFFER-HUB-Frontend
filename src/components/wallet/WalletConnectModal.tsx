@@ -6,10 +6,12 @@ import Image from "next/image";
 import { StellarWalletsKit, type ISupportedWallet } from "@creit.tech/stellar-wallets-kit";
 import { cn } from "@/lib/cn";
 import { LoadingSpinner } from "@/components/ui/Icon";
-import { useWalletKit } from "@/hooks/use-wallet-kit";
 import { useAuthStore } from "@/stores/auth-store";
 import { requestChallenge } from "@/services/wallet-auth.service";
-import { connectWallet as connectWalletApi } from "@/lib/api/wallet-connect";
+import {
+  connectWallet as connectWalletApi,
+  disconnectWallet as disconnectWalletApi,
+} from "@/lib/api/wallet-connect";
 
 export interface WalletConnectModalProps {
   isOpen: boolean;
@@ -35,16 +37,21 @@ export function WalletConnectModal({
   onClose,
   onConnected,
 }: WalletConnectModalProps): React.JSX.Element | null {
-  const { address } = useWalletKit();
+  const user = useAuthStore((state) => state.user);
   const connectWallet = useAuthStore((state) => state.connectWallet);
   const disconnectWallet = useAuthStore((state) => state.disconnectWallet);
   const setPrimaryWallet = useAuthStore((state) => state.setPrimaryWallet);
   const token = useAuthStore((state) => state.token);
 
+  // The one thing this modal should ever call "connected": a wallet the
+  // backend has actually confirmed belongs to the signed-in account.
+  const linkedWallet = user?.wallet ?? null;
+
   const [wallets, setWallets] = useState<ISupportedWallet[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -110,6 +117,18 @@ export function WalletConnectModal({
   }
 
   async function handleDisconnect() {
+    if (linkedWallet?.id && token) {
+      setIsDisconnecting(true);
+      try {
+        await disconnectWalletApi(token, linkedWallet.id);
+        setPrimaryWallet(undefined);
+      } catch (err) {
+        console.error("Failed to disconnect wallet from the account:", err);
+      } finally {
+        setIsDisconnecting(false);
+      }
+    }
+
     await StellarWalletsKit.disconnect();
     disconnectWallet();
   }
@@ -143,10 +162,10 @@ export function WalletConnectModal({
         <div className="flex items-start justify-between mb-5">
           <div>
             <h2 id="wc-title" className="text-lg font-bold text-text-primary">
-              {address ? "Wallet connected" : "Connect wallet"}
+              {linkedWallet ? "Wallet connected" : "Connect wallet"}
             </h2>
             <p className="text-sm text-text-secondary mt-0.5">
-              {address ? "Your Stellar wallet is active" : "Choose a wallet to sign in securely"}
+              {linkedWallet ? "Your Stellar wallet is active" : "Choose a wallet to sign in securely"}
             </p>
           </div>
 
@@ -174,14 +193,14 @@ export function WalletConnectModal({
         <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-5" />
 
         {/* Content */}
-        {address ? (
+        {linkedWallet ? (
           <div className="space-y-4">
             <div className="rounded-xl p-4 shadow-[inset_3px_3px_6px_#d1d5db,inset_-3px_-3px_6px_#ffffff]">
               <p className="text-xs font-medium text-text-secondary mb-1.5">Connected address</p>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                 <p className="font-mono text-sm font-semibold text-text-primary truncate">
-                  {truncateAddress(address)}
+                  {truncateAddress(linkedWallet.publicKey)}
                 </p>
               </div>
             </div>
@@ -190,15 +209,17 @@ export function WalletConnectModal({
               <button
                 type="button"
                 onClick={handleDisconnect}
+                disabled={isDisconnecting}
                 className={cn(
                   "flex-1 py-2.5 rounded-xl text-sm font-medium",
                   "text-text-secondary bg-white",
                   "shadow-[3px_3px_6px_#d1d5db,-3px_-3px_6px_#ffffff]",
                   "hover:text-error active:shadow-[inset_2px_2px_4px_#d1d5db,inset_-2px_-2px_4px_#ffffff]",
                   "transition-all duration-150 cursor-pointer",
+                  "disabled:opacity-60 disabled:cursor-not-allowed",
                 )}
               >
-                Disconnect
+                {isDisconnecting ? "Disconnecting..." : "Disconnect"}
               </button>
               <button
                 type="button"
