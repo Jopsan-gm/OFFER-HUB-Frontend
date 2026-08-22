@@ -8,6 +8,8 @@ import { cn } from "@/lib/cn";
 import { LoadingSpinner } from "@/components/ui/Icon";
 import { useWalletKit } from "@/hooks/use-wallet-kit";
 import { useAuthStore } from "@/stores/auth-store";
+import { requestChallenge } from "@/services/wallet-auth.service";
+import { connectWallet as connectWalletApi } from "@/lib/api/wallet-connect";
 
 export interface WalletConnectModalProps {
   isOpen: boolean;
@@ -36,6 +38,8 @@ export function WalletConnectModal({
   const { address } = useWalletKit();
   const connectWallet = useAuthStore((state) => state.connectWallet);
   const disconnectWallet = useAuthStore((state) => state.disconnectWallet);
+  const setPrimaryWallet = useAuthStore((state) => state.setPrimaryWallet);
+  const token = useAuthStore((state) => state.token);
 
   const [wallets, setWallets] = useState<ISupportedWallet[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -73,6 +77,28 @@ export function WalletConnectModal({
     try {
       StellarWalletsKit.setWallet(wallet.id);
       const { address: connected } = await StellarWalletsKit.fetchAddress();
+
+      // Signed in already: prove ownership of this key and persist the link
+      // server-side, the same way wallet sign-in does, so the account's
+      // primary-wallet state (and anything gated on it, like the "connect
+      // your wallet" banner) actually reflects reality instead of only this
+      // browser's local SWK session.
+      if (token) {
+        const { challenge } = await requestChallenge(connected);
+        const { signedMessage } = await StellarWalletsKit.signMessage(challenge, {
+          address: connected,
+        });
+        const wallets = await connectWalletApi(token, {
+          publicKey: connected,
+          signature: signedMessage,
+          challenge,
+        });
+        const primary = wallets.find((w) => w.isPrimary);
+        if (primary) {
+          setPrimaryWallet({ publicKey: primary.publicKey, type: primary.type });
+        }
+      }
+
       connectWallet(connected);
       onConnected?.(connected);
       onClose();

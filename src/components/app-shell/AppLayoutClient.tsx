@@ -7,6 +7,7 @@ import { AppHeader, AppSidebar } from "@/components/app-shell";
 import { OnboardingTour } from "@/components/onboarding";
 import { NotificationToastContainer } from "@/components/notifications/NotificationToastContainer";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
+import { WalletConnectionBanner } from "@/components/wallet/WalletConnectionBanner";
 import { useAuthStore } from "@/stores/auth-store";
 import { isNewUser } from "@/lib/auth/is-new-user";
 import { sendVerification } from "@/lib/api/auth";
@@ -36,6 +37,10 @@ export function AppLayoutClient({ children }: AppLayoutClientProps): React.JSX.E
   }, [hasHydrated, token, user, router]);
 
   const isDashboardPage = pathname?.endsWith("/dashboard");
+  // #362: the wallet reminder also belongs on the profile page, not just the
+  // dashboard — a walletless profile is exactly the "incomplete" state it's
+  // there to nudge the user out of.
+  const isProfilePage = pathname?.endsWith("/profile");
 
   const handleResendVerification = async () => {
     if (token) {
@@ -86,6 +91,9 @@ export function AppLayoutClient({ children }: AppLayoutClientProps): React.JSX.E
               isVerified={user.isEmailVerified}
               onResend={handleResendVerification}
             />
+          )}
+          {(isDashboardPage || isProfilePage) && user && (
+            <WalletConnectionBanner userId={user.id} hasWallet={user.wallet != null} />
           )}
           {children}
         </main>

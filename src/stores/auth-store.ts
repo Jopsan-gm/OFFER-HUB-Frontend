@@ -50,6 +50,12 @@ interface AuthState extends WalletConnectionState {
   setLoading: (loading: boolean) => void;
   setRedirectAfterLogin: (path: string | null) => void;
   setHasHydrated: (value: boolean) => void;
+  /**
+   * Reflects the account's primary wallet (backend source of truth) onto
+   * `user.wallet` — e.g. after `POST /wallet/connect` links a new one. A
+   * no-op if nothing is signed in yet.
+   */
+  setPrimaryWallet: (wallet: UserWallet | undefined) => void;
 }
 
 /**
@@ -106,6 +112,8 @@ export const useAuthStore = create<AuthState>()(
       connectWallet: (address) => set({ walletAddress: address, walletConnected: true }),
       disconnectWallet: () => set({ walletAddress: null, walletConnected: false }),
       setHasHydrated: (value) => set({ hasHydrated: value }),
+      setPrimaryWallet: (wallet) =>
+        set((state) => (state.user ? { user: { ...state.user, wallet } } : state)),
     }),
     {
       name: "auth-state",
