@@ -25,16 +25,25 @@ export function AppLayoutClient({ children }: AppLayoutClientProps): React.JSX.E
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
 
+  const isAuthenticated = Boolean(token && user);
+  const needsOnboarding = user != null && isNewUser(user);
+  // Whether it's safe to show the dashboard at all — false while we're about
+  // to redirect away from it. Rendering `children` unconditionally here (the
+  // redirect used to be a side effect with no corresponding gate) let an
+  // incomplete/logged-out user see a flash of real dashboard content for one
+  // frame before the effect below kicked in.
+  const canRenderApp = hasHydrated && isAuthenticated && !needsOnboarding;
+
   useEffect(() => {
     if (!hasHydrated) return;
-    if (!token || !user) {
+    if (!isAuthenticated) {
       router.replace("/login");
       return;
     }
-    if (isNewUser(user)) {
+    if (needsOnboarding) {
       router.replace("/onboarding");
     }
-  }, [hasHydrated, token, user, router]);
+  }, [hasHydrated, isAuthenticated, needsOnboarding, router]);
 
   const isDashboardPage = pathname?.endsWith("/dashboard");
   // #362: the wallet reminder also belongs on the profile page, not just the
@@ -47,6 +56,17 @@ export function AppLayoutClient({ children }: AppLayoutClientProps): React.JSX.E
       await sendVerification(token);
     }
   };
+
+  if (!canRenderApp) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"
+          aria-label="Loading"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="app-no-scroll h-screen bg-background flex flex-col overflow-hidden">
