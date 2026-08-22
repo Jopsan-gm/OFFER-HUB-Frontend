@@ -376,7 +376,7 @@ html:has(.app-no-scroll) body {
 }
 
 .animate-tab-panel-in {
-  animation: tabPanelIn 0.22s ease-out forwards;
+  animation: tabPanelIn 0.4s ease-out forwards;
 }
 
 .animate-scale-in {
