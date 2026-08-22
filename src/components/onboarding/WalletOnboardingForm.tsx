@@ -278,6 +278,9 @@ export function WalletOnboardingForm() {
             />
           </div>
 
+          {/* Already chosen at registration (typed for email, auto-generated
+              for wallet-first) — onboarding collects the rest of the
+              profile, not a rename. Change it later from account settings. */}
           <AuthInput
             label="Username"
             type="text"
@@ -287,6 +290,7 @@ export function WalletOnboardingForm() {
             error={step1Errors.username}
             placeholder="jane_dev"
             autoComplete="username"
+            readOnly
           />
 
           {/* Role selector */}
