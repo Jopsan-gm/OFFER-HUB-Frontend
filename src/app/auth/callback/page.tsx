@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/stores/auth-store";
+import { isNewUser } from "@/lib/auth/is-new-user";
 import { oauthCallback, OAuthCallbackError, type OAuthProvider } from "@/lib/api/oauth";
 import { LoadingSpinner, Icon, ICON_PATHS } from "@/components/ui/Icon";
 
@@ -77,18 +78,18 @@ export default function OAuthCallbackPage() {
         });
 
         // LOGIN or REGISTER success
-        login(
-          {
-            id: result.user.id,
-            email: result.user.email,
-            username: result.user.username,
-            avatarUrl: session.oauthAvatarUrl,
-            type: result.user.type as "BUYER" | "SELLER" | "BOTH",
-            balance: result.user.balance || undefined,
-            wallet: result.user.wallet || undefined,
-          },
-          result.token
-        );
+        const oauthUser = {
+          id: result.user.id,
+          email: result.user.email,
+          username: result.user.username,
+          firstName: result.user.firstName ?? null,
+          lastName: result.user.lastName ?? null,
+          avatarUrl: session.oauthAvatarUrl,
+          type: result.user.type as "BUYER" | "SELLER" | "BOTH",
+          balance: result.user.balance || undefined,
+          wallet: result.user.wallet || undefined,
+        };
+        login(oauthUser, result.token);
 
         // Clear NextAuth session (we use our own JWT)
         await signOut({ redirect: false });
@@ -99,8 +100,13 @@ export default function OAuthCallbackPage() {
 
         setState({ type: "success" });
 
-        // Redirect to dashboard or saved path
-        const destination = redirectAfterLogin || "/app/dashboard"; // /app/dashboard redirects based on mode
+        // A fresh OAuth registration has no firstName yet — same as an email
+        // or wallet registration, it needs onboarding before the dashboard,
+        // not after (this used to route to /app/dashboard unconditionally,
+        // which just got bounced straight back out to /onboarding).
+        const destination = isNewUser(oauthUser)
+          ? "/onboarding"
+          : redirectAfterLogin || "/app/dashboard"; // /app/dashboard redirects based on mode
         setRedirectAfterLogin(null);
         router.push(destination);
       } catch (error) {
