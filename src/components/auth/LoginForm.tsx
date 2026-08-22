@@ -251,133 +251,122 @@ export function LoginForm() {
         })}
       </div>
 
-      {/* Wallet panel */}
+      {/* Method panel — keyed by activeTab so switching tabs remounts this
+          wrapper and replays the entrance animation, instead of an instant
+          swap between two permanently-mounted, hidden-toggled panels.
+          min-h lives here (not on the wallet panel alone) so the card is the
+          same height under both tabs — otherwise the box snaps to its new
+          size the instant the panel remounts, which reads as an abrupt cut
+          no matter how smooth the fade itself is. */}
       <div
-        role="tabpanel"
-        id="auth-panel-wallet"
-        aria-labelledby="auth-tab-wallet"
-        hidden={activeTab !== "wallet"}
-        // Roughly the height of the email panel, so switching tabs does not
-        // collapse the card and shove the footer links up the page.
-        className="min-h-[22rem] flex flex-col justify-center gap-5"
+        key={activeTab}
+        className="animate-tab-panel-in min-h-[22rem] flex flex-col justify-center"
       >
-        <div className="text-center">
-          <h2 className="text-base font-semibold text-text-primary">Choose your wallet</h2>
-          <p className="text-xs text-text-secondary mt-1">Select a wallet to sign in securely</p>
-        </div>
-
-        <WalletSignInButton disabled={isLoading} onSignedIn={handleWalletSignedIn} />
-      </div>
-
-      {/* Email panel — the pre-existing sign-in experience, unchanged */}
-      <div
-        role="tabpanel"
-        id="auth-panel-email"
-        aria-labelledby="auth-tab-email"
-        hidden={activeTab !== "email"}
-      >
-        {/* Social Auth */}
-        <div
-          className="opacity-0 animate-fade-in-up"
-          style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}
-        >
-          <SocialAuthButtons />
-        </div>
-
-        {/* Divider */}
-        <div
-          className="opacity-0 animate-fade-in-up"
-          style={{ animationDelay: "0.15s", animationFillMode: "forwards" }}
-        >
-          <AuthDivider />
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-3">
+        {activeTab === "wallet" ? (
           <div
-            className="opacity-0 animate-fade-in-up"
-            style={{ animationDelay: "0.2s", animationFillMode: "forwards" }}
+            role="tabpanel"
+            id="auth-panel-wallet"
+            aria-labelledby="auth-tab-wallet"
+            className="flex flex-col gap-8 px-2"
           >
-            <AuthInput
-              label="Email"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="you@example.com"
-              error={errors.email}
-              autoComplete="email"
-            />
-          </div>
-
-          <div
-            className="opacity-0 animate-fade-in-up"
-            style={{ animationDelay: "0.25s", animationFillMode: "forwards" }}
-          >
-            <label className="block text-sm font-medium text-text-primary mb-2">Password</label>
-            <AuthInput
-              label=""
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              error={errors.password}
-              autoComplete="current-password"
-            />
-            <div className="flex justify-end mt-2">
-              <Link
-                href="/forgot-password"
-                className="text-sm font-medium text-primary hover:text-primary-hover transition-colors"
-              >
-                Forgot your password?
-              </Link>
+            <div className="text-center">
+              <h2 className="text-lg font-semibold text-text-primary">Choose your wallet</h2>
+              <p className="text-sm text-text-secondary mt-2">
+                Select a wallet to sign in securely
+              </p>
             </div>
-          </div>
 
-          {/* Submit Button */}
-          <div
-            className="opacity-0 animate-fade-in-up"
-            style={{ animationDelay: "0.3s", animationFillMode: "forwards" }}
-          >
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={cn(
-                "w-full px-6 py-3 rounded-xl font-medium mt-4 cursor-pointer",
-                "bg-primary text-white",
-                "shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
-                "hover:bg-primary-hover hover:shadow-[6px_6px_12px_#d1d5db,-6px_-6px_12px_#ffffff] hover:scale-[1.02]",
-                "active:shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2)] active:scale-[0.98]",
-                "disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100",
-                "transition-all duration-200"
-              )}
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                "Sign in"
-              )}
-            </button>
+            <WalletSignInButton disabled={isLoading} onSignedIn={handleWalletSignedIn} />
           </div>
-        </form>
+        ) : (
+          <div
+            role="tabpanel"
+            id="auth-panel-email"
+            aria-labelledby="auth-tab-email"
+          >
+            {/* Social Auth */}
+            <SocialAuthButtons />
+
+            {/* Divider */}
+            <AuthDivider />
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <AuthInput
+                label="Email"
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="you@example.com"
+                error={errors.email}
+                autoComplete="email"
+              />
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Password
+                </label>
+                <AuthInput
+                  label=""
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Enter your password"
+                  error={errors.password}
+                  autoComplete="current-password"
+                />
+                <div className="flex justify-end mt-2">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm font-medium text-primary hover:text-primary-hover transition-colors"
+                  >
+                    Forgot your password?
+                  </Link>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={cn(
+                  "w-full px-6 py-3 rounded-xl font-medium mt-4 cursor-pointer",
+                  "bg-primary text-white",
+                  "shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff]",
+                  "hover:bg-primary-hover hover:shadow-[6px_6px_12px_#d1d5db,-6px_-6px_12px_#ffffff] hover:scale-[1.02]",
+                  "active:shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2)] active:scale-[0.98]",
+                  "disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100",
+                  "transition-all duration-200"
+                )}
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Signing in...
+                  </span>
+                ) : (
+                  "Sign in"
+                )}
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       {/* Register Link */}
