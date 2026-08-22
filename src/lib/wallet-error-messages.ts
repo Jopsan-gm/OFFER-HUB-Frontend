@@ -19,6 +19,10 @@ const CANCELLATION_PATTERNS = [
   /user closed/i,
   /not allowed/i,
   /permission/i,
+  // Freighter's extension popup rejects with this raw RxJS `EmptyError`
+  // message when it's closed without the user responding — it never
+  // mentions "cancel" or "reject" at all.
+  /no elements in sequence/i,
 ];
 
 export const WALLET_CANCELLED_MESSAGE = "Connection cancelled — you closed or declined the request in your wallet.";
