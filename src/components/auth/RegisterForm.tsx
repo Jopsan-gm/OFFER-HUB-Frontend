@@ -341,13 +341,16 @@ export function RegisterForm() {
           size the instant the panel remounts, which reads as an abrupt cut
           no matter how smooth the fade itself is. Taller than LoginForm's
           because the email panel here has two more fields. */}
-      <div key={activeTab} className="animate-tab-panel-in min-h-[28rem]">
+      <div
+        key={activeTab}
+        className="animate-tab-panel-in min-h-[28rem] flex flex-col justify-center"
+      >
         {activeTab === "wallet" ? (
           <div
             role="tabpanel"
             id="register-panel-wallet"
             aria-labelledby="register-tab-wallet"
-            className="h-full flex flex-col justify-center gap-5"
+            className="flex flex-col gap-5"
           >
             <div className="text-center">
               <h2 className="text-base font-semibold text-text-primary">Choose your wallet</h2>
