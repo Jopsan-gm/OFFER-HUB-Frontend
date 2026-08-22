@@ -172,7 +172,7 @@ describe('useWalletAuth — error mapping', () => {
     await act(async () => { await result.current.signIn(PUBLIC_KEY); });
 
     expect(result.current.error).toBe(
-      'Connection cancelled — you closed or declined the request in your wallet.'
+      'Connection cancelled. You closed or declined the request in your wallet.'
     );
   });
 

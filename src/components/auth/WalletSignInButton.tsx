@@ -38,7 +38,7 @@ export function WalletSignInButton({
     if (session !== null) onSignedIn?.();
   }
 
-  // Always open the picker — Stellar Wallets Kit remembers the last wallet
+  // Always open the picker. Stellar Wallets Kit remembers the last wallet
   // you picked (e.g. xBull) across visits, so silently reusing that instead
   // of asking meant every future sign-in skipped straight to it with no way
   // to pick a different one.
@@ -62,7 +62,7 @@ export function WalletSignInButton({
         ))}
       </div>
 
-      {/* Primary CTA — matches the email sign-in button style */}
+      {/* Primary CTA, matches the email sign-in button style */}
       <button
         type="button"
         onClick={handleConnect}

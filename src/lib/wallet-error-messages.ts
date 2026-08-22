@@ -1,7 +1,7 @@
 /**
  * Wallet extensions (Freighter, Lobstr, xBull) each throw their own raw,
  * technical message when the user declines a connection or signature
- * request in the extension's own popup — e.g. "User declined access",
+ * request in the extension's own popup, e.g. "User declined access",
  * codes, or wording that means nothing to someone who just clicked
  * "Cancel". Surfacing that text directly reads as a broken app, not a
  * normal thing the user just did on purpose.
@@ -20,12 +20,12 @@ const CANCELLATION_PATTERNS = [
   /not allowed/i,
   /permission/i,
   // Freighter's extension popup rejects with this raw RxJS `EmptyError`
-  // message when it's closed without the user responding — it never
+  // message when it's closed without the user responding. It never
   // mentions "cancel" or "reject" at all.
   /no elements in sequence/i,
 ];
 
-export const WALLET_CANCELLED_MESSAGE = "Connection cancelled — you closed or declined the request in your wallet.";
+export const WALLET_CANCELLED_MESSAGE = "Connection cancelled. You closed or declined the request in your wallet.";
 
 function extractMessage(error: unknown): string | null {
   if (error instanceof Error) return error.message;
