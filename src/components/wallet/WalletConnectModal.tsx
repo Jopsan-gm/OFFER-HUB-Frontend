@@ -12,20 +12,12 @@ import {
   connectWallet as connectWalletApi,
   disconnectWallet as disconnectWalletApi,
 } from "@/lib/api/wallet-connect";
+import { toWalletErrorMessage } from "@/lib/wallet-error-messages";
 
 export interface WalletConnectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConnected?: (address: string) => void;
-}
-
-function toErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "object" && error !== null && "message" in error) {
-    const { message } = error as { message: unknown };
-    if (typeof message === "string" && message.length > 0) return message;
-  }
-  return fallback;
 }
 
 function truncateAddress(address: string): string {
@@ -60,7 +52,7 @@ export function WalletConnectModal({
     let cancelled = false;
     StellarWalletsKit.refreshSupportedWallets()
       .then((supported) => { if (!cancelled) { setWallets(supported); setLoadError(null); } })
-      .catch((err: unknown) => { if (!cancelled) setLoadError(toErrorMessage(err, "Could not load wallets.")); });
+      .catch((err: unknown) => { if (!cancelled) setLoadError(toWalletErrorMessage(err, "Could not load wallets.")); });
     return () => { cancelled = true; };
   }, [isOpen]);
 
@@ -110,7 +102,7 @@ export function WalletConnectModal({
       onConnected?.(connected);
       onClose();
     } catch (err) {
-      setConnectError(toErrorMessage(err, `Could not connect to ${wallet.name}. Please try again.`));
+      setConnectError(toWalletErrorMessage(err, `Could not connect to ${wallet.name}. Please try again.`));
     } finally {
       setConnectingId(null);
     }

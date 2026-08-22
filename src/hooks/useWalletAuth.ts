@@ -9,6 +9,7 @@ import {
   WalletAuthError,
   type WalletSession,
 } from "@/services/wallet-auth.service";
+import { isWalletCancellation, WALLET_CANCELLED_MESSAGE } from "@/lib/wallet-error-messages";
 
 /**
  * Where the flow currently is. Each value maps to a distinct thing the user is
@@ -36,6 +37,14 @@ export interface UseWalletAuthResult {
  * the user has no way to act on.
  */
 function toUserMessage(error: unknown): string {
+  // Declining the connection or signature prompt in the wallet extension
+  // throws a raw, technical, extension-specific message (Freighter, Lobstr
+  // and xBull each word it differently) — showing that directly reads as a
+  // broken app rather than something the user just did on purpose.
+  if (isWalletCancellation(error)) {
+    return WALLET_CANCELLED_MESSAGE;
+  }
+
   if (error instanceof WalletAuthError) {
     switch (error.code) {
       case "WALLET_CHALLENGE_EXPIRED":

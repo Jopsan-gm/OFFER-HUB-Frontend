@@ -165,13 +165,24 @@ describe('useWalletAuth — error mapping', () => {
     expect(result.current.error).toMatch(/verified/i);
   });
 
-  it('uses the message field from plain objects (wallet kit rejections)', async () => {
+  it('normalizes a wallet-kit cancellation to one clear message instead of the raw extension text', async () => {
     mockSignMessage.mockRejectedValue({ message: 'User rejected the request' });
     const { result } = renderHook(() => useWalletAuth());
 
     await act(async () => { await result.current.signIn(PUBLIC_KEY); });
 
-    expect(result.current.error).toBe('User rejected the request');
+    expect(result.current.error).toBe(
+      'Connection cancelled — you closed or declined the request in your wallet.'
+    );
+  });
+
+  it('still uses the message field from plain objects for a non-cancellation failure', async () => {
+    mockSignMessage.mockRejectedValue({ message: 'Extension is locked' });
+    const { result } = renderHook(() => useWalletAuth());
+
+    await act(async () => { await result.current.signIn(PUBLIC_KEY); });
+
+    expect(result.current.error).toBe('Extension is locked');
   });
 });
 
