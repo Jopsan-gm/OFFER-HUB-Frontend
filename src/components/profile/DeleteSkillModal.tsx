@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon, ICON_PATHS, LoadingSpinner } from "@/components/ui/Icon";
+import { LoadingSpinner } from "@/components/ui/Icon";
 import type { Skill } from "@/lib/api/skills-api";
 
 const NEU_RAISED = "6px 6px 12px #0a0f1a, -6px -6px 12px #1e2a4a";

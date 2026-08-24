@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Icon, ICON_PATHS, LoadingSpinner } from "@/components/ui/Icon";
 import { NEUMORPHIC_CARD, NEUMORPHIC_INPUT, INPUT_ERROR_STYLES, PRIMARY_BUTTON } from "@/lib/styles";
@@ -42,22 +42,28 @@ export function AvailabilitySettings(): React.JSX.Element {
     hydrated,
     token,
     user,
+    setDirty,
   } = useAvailabilityForm();
 
   const [hoursInput, setHoursInput] = useState(String(form.hoursPerWeek));
   const [hoursError, setHoursError] = useState<string | undefined>();
+  const [prevHoursPerWeek, setPrevHoursPerWeek] = useState(form.hoursPerWeek);
+  const [prevDirty, setPrevDirty] = useState(dirty);
+
+  // Sync hoursInput with external changes directly during render (no effect)
+  if (form.hoursPerWeek !== prevHoursPerWeek || (!dirty && prevDirty)) {
+    setPrevHoursPerWeek(form.hoursPerWeek);
+    setPrevDirty(dirty);
+    setHoursInput(String(form.hoursPerWeek));
+  } else if (dirty !== prevDirty) {
+    setPrevDirty(dirty);
+  }
 
   const browserTz = useMemo(() => getBrowserTimezone(), []);
   const minDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const timezones = useMemo(() => listIanaTimezones(), []);
 
   const displayName = user?.username?.trim() || "Your name";
-
-  useEffect(() => {
-    if (!dirty) {
-      setHoursInput(String(form.hoursPerWeek));
-    }
-  }, [form.hoursPerWeek, dirty]);
 
   function toggleWeekday(day: number): void {
     const set = new Set(form.preferredWeekdays);
@@ -71,9 +77,11 @@ export function AvailabilitySettings(): React.JSX.Element {
     setHoursError(undefined);
     const n = Number.parseInt(raw, 10);
     if (raw === "" || Number.isNaN(n)) {
+      setDirty(true);
       return;
     }
     if (n < MIN_HOURS || n > MAX_HOURS) {
+      setDirty(true);
       setHoursError(`Enter ${MIN_HOURS}–${MAX_HOURS}`);
       return;
     }
